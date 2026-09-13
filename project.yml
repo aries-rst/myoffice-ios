@@ -1,0 +1,46 @@
+name: MyOffice
+options:
+  bundleIdPrefix: com.myoffice
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+configs:
+  Debug: debug
+  Release: release
+targets:
+  MyOffice:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - MyOffice
+    info:
+      path: MyOffice/Info.plist
+      properties:
+        CFBundleDisplayName: "MyOffice"
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.myoffice.app
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ENABLE_PREVIEWS: YES
+schemes:
+  MyOffice:
+    build:
+      targets:
+        MyOffice: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+    archive:
+      config: Release
