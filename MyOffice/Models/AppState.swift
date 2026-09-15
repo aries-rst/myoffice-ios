@@ -38,7 +38,7 @@ final class AppState: ObservableObject {
         toastMessage = text
     }
 
-    func addReport(to parentId: UUID, name: String, title: String, phone: String, email: String, telegram: String, photoData: Data?) {
+    func addReport(to parentId: UUID, name: String, title: String, phone: String, email: String, telegram: String, whatsapp: String, photoData: Data?) {
         guard canAddPerson else {
             upsellContext = .limit
             return
@@ -49,6 +49,7 @@ final class AppState: ObservableObject {
             phone: phone.isEmpty ? nil : phone,
             email: email.isEmpty ? nil : email,
             telegram: telegram.isEmpty ? nil : telegram,
+            whatsapp: whatsapp.isEmpty ? nil : whatsapp,
             photoData: photoData
         )
         root = root.appendingChild(to: parentId, newNode)
@@ -78,13 +79,14 @@ final class AppState: ObservableObject {
                 node.phone = nil
                 node.email = nil
                 node.telegram = nil
+                node.whatsapp = nil
                 node.photoData = nil
             }
         }
         showToast(Strings.t(.vacated, lang))
     }
 
-    func fillVacancy(_ nodeId: UUID, name: String, phone: String, email: String, telegram: String, photoData: Data?) {
+    func fillVacancy(_ nodeId: UUID, name: String, phone: String, email: String, telegram: String, whatsapp: String, photoData: Data?) {
         guard canAddPerson else {
             upsellContext = .limit
             return
@@ -94,12 +96,13 @@ final class AppState: ObservableObject {
             node.phone = phone.isEmpty ? nil : phone
             node.email = email.isEmpty ? nil : email
             node.telegram = telegram.isEmpty ? nil : telegram
+            node.whatsapp = whatsapp.isEmpty ? nil : whatsapp
             node.photoData = photoData
         }
         showToast(Strings.t(.hired, lang))
     }
 
-    func updatePerson(_ nodeId: UUID, nameIndex: Int, name: String, title: String?, updateContacts: Bool, phone: String, email: String, telegram: String, photoData: Data?) {
+    func updatePerson(_ nodeId: UUID, nameIndex: Int, name: String, title: String?, updateContacts: Bool, phone: String, email: String, telegram: String, whatsapp: String, photoData: Data?) {
         root = root.updating(id: nodeId) { node in
             if node.names.indices.contains(nameIndex) {
                 node.names[nameIndex] = name
@@ -111,6 +114,7 @@ final class AppState: ObservableObject {
                 node.phone = phone.isEmpty ? nil : phone
                 node.email = email.isEmpty ? nil : email
                 node.telegram = telegram.isEmpty ? nil : telegram
+                node.whatsapp = whatsapp.isEmpty ? nil : whatsapp
                 node.photoData = photoData
             }
         }
