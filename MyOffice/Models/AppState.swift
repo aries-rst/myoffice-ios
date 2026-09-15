@@ -3,7 +3,6 @@ import Combine
 
 enum Tier: String, CaseIterable {
     case free, pro, max
-
     var limit: Int? {
         switch self {
         case .free: return 7
@@ -39,12 +38,19 @@ final class AppState: ObservableObject {
         toastMessage = text
     }
 
-    func addReport(to parentId: UUID, name: String, title: String) {
+    func addReport(to parentId: UUID, name: String, title: String, phone: String, email: String, telegram: String, photoData: Data?) {
         guard canAddPerson else {
             upsellContext = .limit
             return
         }
-        let newNode = OrgNode(names: [name], title: title)
+        let newNode = OrgNode(
+            names: [name],
+            title: title,
+            phone: phone.isEmpty ? nil : phone,
+            email: email.isEmpty ? nil : email,
+            telegram: telegram.isEmpty ? nil : telegram,
+            photoData: photoData
+        )
         root = root.appendingChild(to: parentId, newNode)
         showToast(Strings.t(.addedReport, lang))
     }
@@ -69,29 +75,43 @@ final class AppState: ObservableObject {
         } else {
             root = root.updating(id: nodeId) { node in
                 node.names = []
+                node.phone = nil
+                node.email = nil
+                node.telegram = nil
+                node.photoData = nil
             }
         }
         showToast(Strings.t(.vacated, lang))
     }
 
-    func fillVacancy(_ nodeId: UUID, name: String) {
+    func fillVacancy(_ nodeId: UUID, name: String, phone: String, email: String, telegram: String, photoData: Data?) {
         guard canAddPerson else {
             upsellContext = .limit
             return
         }
         root = root.updating(id: nodeId) { node in
             node.names = [name]
+            node.phone = phone.isEmpty ? nil : phone
+            node.email = email.isEmpty ? nil : email
+            node.telegram = telegram.isEmpty ? nil : telegram
+            node.photoData = photoData
         }
         showToast(Strings.t(.hired, lang))
     }
 
-    func updatePerson(_ nodeId: UUID, nameIndex: Int, name: String, title: String?) {
+    func updatePerson(_ nodeId: UUID, nameIndex: Int, name: String, title: String?, updateContacts: Bool, phone: String, email: String, telegram: String, photoData: Data?) {
         root = root.updating(id: nodeId) { node in
             if node.names.indices.contains(nameIndex) {
                 node.names[nameIndex] = name
             }
             if let title = title {
                 node.title = title
+            }
+            if updateContacts {
+                node.phone = phone.isEmpty ? nil : phone
+                node.email = email.isEmpty ? nil : email
+                node.telegram = telegram.isEmpty ? nil : telegram
+                node.photoData = photoData
             }
         }
         showToast(lang == .ru ? "Сохранено" : "Saved")
