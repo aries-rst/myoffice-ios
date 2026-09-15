@@ -5,14 +5,14 @@ enum PersonEditContext: Identifiable {
     case addReport(parentId: UUID)
     case addComanager(nodeId: UUID)
     case fillVacancy(nodeId: UUID)
-    case editPerson(nodeId: UUID, nameIndex: Int, currentName: String, currentTitle: String, showTitleField: Bool, currentPhone: String?, currentEmail: String?, currentTelegram: String?, currentPhotoData: Data?)
+    case editPerson(nodeId: UUID, nameIndex: Int, currentName: String, currentTitle: String, showTitleField: Bool, currentPhone: String?, currentEmail: String?, currentTelegram: String?, currentWhatsapp: String?, currentPhotoData: Data?)
 
     var id: String {
         switch self {
         case .addReport(let id): return "addReport-\(id)"
         case .addComanager(let id): return "addComanager-\(id)"
         case .fillVacancy(let id): return "fillVacancy-\(id)"
-        case .editPerson(let id, let idx, _, _, _, _, _, _, _): return "editPerson-\(id)-\(idx)"
+        case .editPerson(let id, let idx, _, _, _, _, _, _, _, _): return "editPerson-\(id)-\(idx)"
         }
     }
 }
@@ -27,6 +27,7 @@ struct PersonEditSheet: View {
     @State private var phone: String = ""
     @State private var email: String = ""
     @State private var telegram: String = ""
+    @State private var whatsapp: String = ""
     @State private var photoItem: PhotosPickerItem?
     @State private var photoData: Data?
 
@@ -36,7 +37,7 @@ struct PersonEditSheet: View {
         switch context {
         case .addReport: return true
         case .addComanager, .fillVacancy: return false
-        case .editPerson(_, _, _, _, let showTitle, _, _, _, _): return showTitle
+        case .editPerson(_, _, _, _, let showTitle, _, _, _, _, _): return showTitle
         }
     }
 
@@ -44,7 +45,7 @@ struct PersonEditSheet: View {
         switch context {
         case .addReport, .fillVacancy: return true
         case .addComanager: return false
-        case .editPerson(_, _, _, _, let showTitle, _, _, _, _): return showTitle
+        case .editPerson(_, _, _, _, let showTitle, _, _, _, _, _): return showTitle
         }
     }
 
@@ -100,6 +101,8 @@ struct PersonEditSheet: View {
                             .keyboardType(.emailAddress)
                             .autocapitalization(.none)
                         TextField("Telegram", text: $telegram)
+                        TextField("WhatsApp", text: $whatsapp)
+                            .keyboardType(.phonePad)
                     }
                 }
             }
@@ -119,12 +122,13 @@ struct PersonEditSheet: View {
         }
         .presentationDetents([.medium, .large])
         .onAppear {
-            if case .editPerson(_, _, let currentName, let currentTitle, _, let currentPhone, let currentEmail, let currentTelegram, let currentPhotoData) = context {
+            if case .editPerson(_, _, let currentName, let currentTitle, _, let currentPhone, let currentEmail, let currentTelegram, let currentWhatsapp, let currentPhotoData) = context {
                 name = currentName
                 title = currentTitle
                 phone = currentPhone ?? ""
                 email = currentEmail ?? ""
                 telegram = currentTelegram ?? ""
+                whatsapp = currentWhatsapp ?? ""
                 photoData = currentPhotoData
             }
         }
@@ -138,17 +142,17 @@ struct PersonEditSheet: View {
             app.addReport(
                 to: parentId, name: trimmedName,
                 title: trimmedTitle.isEmpty ? (isRussian ? "Должность" : "Position") : trimmedTitle,
-                phone: phone, email: email, telegram: telegram, photoData: photoData
+                phone: phone, email: email, telegram: telegram, whatsapp: whatsapp, photoData: photoData
             )
         case .addComanager(let nodeId):
             app.addComanager(to: nodeId, name: trimmedName)
         case .fillVacancy(let nodeId):
-            app.fillVacancy(nodeId, name: trimmedName, phone: phone, email: email, telegram: telegram, photoData: photoData)
-        case .editPerson(let nodeId, let nameIndex, _, _, let showTitle, _, _, _, _):
+            app.fillVacancy(nodeId, name: trimmedName, phone: phone, email: email, telegram: telegram, whatsapp: whatsapp, photoData: photoData)
+        case .editPerson(let nodeId, let nameIndex, _, _, let showTitle, _, _, _, _, _):
             app.updatePerson(
                 nodeId, nameIndex: nameIndex, name: trimmedName,
                 title: showTitle ? trimmedTitle : nil, updateContacts: showTitle,
-                phone: phone, email: email, telegram: telegram, photoData: photoData
+                phone: phone, email: email, telegram: telegram, whatsapp: whatsapp, photoData: photoData
             )
         }
     }
