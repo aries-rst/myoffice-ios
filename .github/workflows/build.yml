@@ -62,7 +62,7 @@ jobs:
             CODE_SIGN_IDENTITY="Apple Distribution" \
             PROVISIONING_PROFILE_SPECIFIER="MyOffice App Store"
 
-      - name: Export .ipa
+            - name: Export .ipa
         run: |
           cat > $RUNNER_TEMP/ExportOptions.plist << EOF
           <?xml version="1.0" encoding="UTF-8"?>
@@ -79,13 +79,13 @@ jobs:
               <string>Apple Distribution</string>
               <key>provisioningProfiles</key>
               <dict>
-                  <key>com.aries-rst.myfamilytree.app</key>
-                  <string>MyFamilyTree App Store</string>
+                  <key>com.aries-rst.myoffice.app</key>
+                  <string>MyOffice App Store</string>
               </dict>
           </dict>
           </plist>
           EOF
           xcodebuild -exportArchive \
-            -archivePath $RUNNER_TEMP/MyFamilyTree.xcarchive \
+            -archivePath $RUNNER_TEMP/MyOffice.xcarchive \
             -exportOptionsPlist $RUNNER_TEMP/ExportOptions.plist \
             -exportPath $RUNNER_TEMP/export
