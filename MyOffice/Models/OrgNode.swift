@@ -1,32 +1,40 @@
 import Foundation
 
-/// Fixed department accent tag for a node, independent of the active
-/// workspace theme (mirrors the HTML prototype's per-branch border colors).
 enum ColorTag: Hashable {
     case sales, tech, ceo
 }
 
-/// A position in the org chart. `names` is empty for a vacant position,
-/// holds one name for a normal position, and two names for a co-managed one.
 struct OrgNode: Identifiable, Hashable {
     let id: UUID
     var names: [String]
     var title: String
     var deptColor: ColorTag?
     var children: [OrgNode]
+    var phone: String?
+    var email: String?
+    var telegram: String?
+    var photoData: Data?
 
     init(
         id: UUID = UUID(),
         names: [String],
         title: String,
         deptColor: ColorTag? = nil,
-        children: [OrgNode] = []
+        children: [OrgNode] = [],
+        phone: String? = nil,
+        email: String? = nil,
+        telegram: String? = nil,
+        photoData: Data? = nil
     ) {
         self.id = id
         self.names = names
         self.title = title
         self.deptColor = deptColor
         self.children = children
+        self.phone = phone
+        self.email = email
+        self.telegram = telegram
+        self.photoData = photoData
     }
 
     var isVacant: Bool { names.isEmpty }
@@ -34,7 +42,6 @@ struct OrgNode: Identifiable, Hashable {
 }
 
 extension OrgNode {
-    /// Returns a new tree with the node matching `targetId` mutated in place.
     func updating(id targetId: UUID, transform: (inout OrgNode) -> Void) -> OrgNode {
         var copy = self
         if copy.id == targetId {
@@ -45,7 +52,6 @@ extension OrgNode {
         return copy
     }
 
-    /// Returns a new tree with `child` appended under the node matching `parentId`.
     func appendingChild(to parentId: UUID, _ child: OrgNode) -> OrgNode {
         var copy = self
         if copy.id == parentId {
@@ -56,8 +62,6 @@ extension OrgNode {
         return copy
     }
 
-    /// Returns a new tree with the node matching `targetId` removed entirely
-    /// from its parent's children (used only for leaf/childless nodes).
     func removingNode(id targetId: UUID) -> OrgNode {
         var copy = self
         copy.children.removeAll { $0.id == targetId }
@@ -65,7 +69,6 @@ extension OrgNode {
         return copy
     }
 
-    /// Total filled positions in this subtree (co-managed nodes count as 2).
     func countAll() -> Int {
         names.count + children.reduce(0) { $0 + $1.countAll() }
     }
