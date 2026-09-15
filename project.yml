@@ -1,6 +1,6 @@
 name: MyOffice
 options:
-  bundleIdPrefix: com.myoffice
+  bundleIdPrefix: com.aries-rst.myoffice.app
   deploymentTarget:
     iOS: "16.0"
   createIntermediateGroups: true
@@ -27,7 +27,7 @@ targets:
           - UIInterfaceOrientationLandscapeRight
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.myoffice.app
+        PRODUCT_BUNDLE_IDENTIFIER: com.aries-rst.myoffice.app
         MARKETING_VERSION: "1.0"
         CURRENT_PROJECT_VERSION: "1"
         SWIFT_VERSION: "5.0"
