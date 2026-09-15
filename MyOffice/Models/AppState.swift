@@ -1,7 +1,7 @@
 import Foundation
 import Combine
 
-enum Tier: String, CaseIterable {
+enum Tier: String, CaseIterable, Codable {
     case free, pro, max
     var limit: Int? {
         switch self {
@@ -19,13 +19,43 @@ enum UpsellContext {
 
 @MainActor
 final class AppState: ObservableObject {
-    @Published var lang: Lang = .en
-    @Published var tier: Tier = .free
+    @Published var lang: Lang = .en { didSet { save() } }
+    @Published var tier: Tier = .free { didSet { save() } }
     @Published var theme: WorkspaceTheme = .office
-    @Published var root: OrgNode = OrgNode(names: [], title: "CEO", deptColor: .ceo)
+    @Published var root: OrgNode = OrgNode(names: [], title: "CEO", deptColor: .ceo) { didSet { save() } }
 
     @Published var upsellContext: UpsellContext? = nil
     @Published var toastMessage: String? = nil
+
+    private let rootKey = "myoffice.root"
+    private let tierKey = "myoffice.tier"
+    private let langKey = "myoffice.lang"
+
+    init() {
+        load()
+    }
+
+    private func save() {
+        if let data = try? JSONEncoder().encode(root) {
+            UserDefaults.standard.set(data, forKey: rootKey)
+        }
+        UserDefaults.standard.set(tier.rawValue, forKey: tierKey)
+        UserDefaults.standard.set(lang == .ru ? "ru" : "en", forKey: langKey)
+    }
+
+    private func load() {
+        if let data = UserDefaults.standard.data(forKey: rootKey),
+           let decoded = try? JSONDecoder().decode(OrgNode.self, from: data) {
+            root = decoded
+        }
+        if let tierRaw = UserDefaults.standard.string(forKey: tierKey),
+           let decodedTier = Tier(rawValue: tierRaw) {
+            tier = decodedTier
+        }
+        if let langRaw = UserDefaults.standard.string(forKey: langKey) {
+            lang = langRaw == "ru" ? .ru : .en
+        }
+    }
 
     var employeeCount: Int { root.countAll() }
 
@@ -119,6 +149,25 @@ final class AppState: ObservableObject {
             }
         }
         showToast(lang == .ru ? "Сохранено" : "Saved")
+    }
+
+    func addSuperior(name: String, title: String, phone: String, email: String, telegram: String, whatsapp: String, photoData: Data?) {
+        guard canAddPerson else {
+            upsellContext = .limit
+            return
+        }
+        root = OrgNode(
+            names: [name],
+            title: title,
+            deptColor: .ceo,
+            children: [root],
+            phone: phone.isEmpty ? nil : phone,
+            email: email.isEmpty ? nil : email,
+            telegram: telegram.isEmpty ? nil : telegram,
+            whatsapp: whatsapp.isEmpty ? nil : whatsapp,
+            photoData: photoData
+        )
+        showToast(lang == .ru ? "Добавлено" : "Added")
     }
 
     func selectTheme(_ newTheme: WorkspaceTheme) {
