@@ -8,6 +8,8 @@ struct ExportView: View {
 
     let formats = ["PDF", "PNG", "CSV"]
 
+    private var isRussian: Bool { app.lang == .ru }
+
     var body: some View {
         Form {
             Section(Strings.t(.formatGroup, app.lang)) {
@@ -65,10 +67,14 @@ struct ExportView: View {
 
     @MainActor
     private func renderImage() -> UIImage? {
-        let content = NodeBranchView(node: app.root, onTap: { _ in }, onMenu: { _ in })
-            .padding(30)
-            .background(Color.white)
-            .environmentObject(app)
+        let content = NodeBranchView(
+            node: app.root,
+            onTap: { _ in }, onMenu: { _ in }, onAddReport: { _ in },
+            accent: app.theme.accent, isRussian: isRussian
+        )
+        .padding(30)
+        .background(Color.white)
+        .environmentObject(app)
         let renderer = ImageRenderer(content: content)
         renderer.scale = 3
         return renderer.uiImage
