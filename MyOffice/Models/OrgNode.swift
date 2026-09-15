@@ -1,10 +1,10 @@
 import Foundation
 
-enum ColorTag: Hashable {
+enum ColorTag: String, Hashable, Codable {
     case sales, tech, ceo
 }
 
-struct OrgNode: Identifiable, Hashable {
+struct OrgNode: Identifiable, Hashable, Codable {
     let id: UUID
     var names: [String]
     var title: String
