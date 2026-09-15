@@ -56,6 +56,15 @@ extension OrgNode {
         return copy
     }
 
+    /// Returns a new tree with the node matching `targetId` removed entirely
+    /// from its parent's children (used only for leaf/childless nodes).
+    func removingNode(id targetId: UUID) -> OrgNode {
+        var copy = self
+        copy.children.removeAll { $0.id == targetId }
+        copy.children = copy.children.map { $0.removingNode(id: targetId) }
+        return copy
+    }
+
     /// Total filled positions in this subtree (co-managed nodes count as 2).
     func countAll() -> Int {
         names.count + children.reduce(0) { $0 + $1.countAll() }
@@ -68,34 +77,4 @@ extension OrgNode {
         }
         return nil
     }
-}
-
-enum DemoOrg {
-    static let root: OrgNode = OrgNode(
-        names: ["Елена Маркова"],
-        title: "CEO",
-        deptColor: .ceo,
-        children: [
-            OrgNode(
-                names: ["Игорь Соколов", "Дарья Волкова"],
-                title: "Со-руководители продаж",
-                deptColor: .sales,
-                children: [
-                    OrgNode(names: ["Павел Орлов"], title: "Менеджер по работе с клиентами", deptColor: .sales),
-                    OrgNode(names: [], title: "Менеджер по работе с клиентами", deptColor: .sales),
-                    OrgNode(names: ["Нина Лебедева"], title: "Менеджер по продажам", deptColor: .sales)
-                ]
-            ),
-            OrgNode(
-                names: ["Михаил Титов"],
-                title: "Технический директор",
-                deptColor: .tech,
-                children: [
-                    OrgNode(names: ["Анна Кузнецова"], title: "Backend-разработчик", deptColor: .tech),
-                    OrgNode(names: ["Сергей Попов"], title: "Frontend-разработчик", deptColor: .tech),
-                    OrgNode(names: [], title: "QA-инженер", deptColor: .tech)
-                ]
-            )
-        ]
-    )
 }
