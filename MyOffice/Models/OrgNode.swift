@@ -13,6 +13,7 @@ struct OrgNode: Identifiable, Hashable {
     var phone: String?
     var email: String?
     var telegram: String?
+    var whatsapp: String?
     var photoData: Data?
 
     init(
@@ -24,6 +25,7 @@ struct OrgNode: Identifiable, Hashable {
         phone: String? = nil,
         email: String? = nil,
         telegram: String? = nil,
+        whatsapp: String? = nil,
         photoData: Data? = nil
     ) {
         self.id = id
@@ -34,6 +36,7 @@ struct OrgNode: Identifiable, Hashable {
         self.phone = phone
         self.email = email
         self.telegram = telegram
+        self.whatsapp = whatsapp
         self.photoData = photoData
     }
 
