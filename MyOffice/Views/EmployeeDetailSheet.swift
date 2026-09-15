@@ -5,11 +5,15 @@ struct EmployeeDetailSheet: View {
     @Environment(\.dismiss) var dismiss
     let node: OrgNode
 
+    @State private var editContext: PersonEditContext? = nil
+
+    private var isRussian: Bool { app.lang == .ru }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 16) {
-                HStack(spacing: 16) {
-                    ForEach(node.names, id: \.self) { name in
+                HStack(spacing: 20) {
+                    ForEach(Array(node.names.enumerated()), id: \.offset) { index, name in
                         VStack(spacing: 4) {
                             Image(systemName: "person.crop.circle.fill")
                                 .font(.system(size: 56))
@@ -17,6 +21,18 @@ struct EmployeeDetailSheet: View {
                             Text(name)
                                 .font(.system(size: 16, weight: .bold))
                                 .multilineTextAlignment(.center)
+                            Button {
+                                editContext = .editPerson(
+                                    nodeId: node.id,
+                                    nameIndex: index,
+                                    currentName: name,
+                                    currentTitle: node.title,
+                                    showTitleField: index == 0
+                                )
+                            } label: {
+                                Label(isRussian ? "Изменить" : "Edit", systemImage: "pencil")
+                                    .font(.system(size: 12))
+                            }
                         }
                     }
                 }
@@ -45,6 +61,9 @@ struct EmployeeDetailSheet: View {
                     Button(Strings.t(.closeDetail, app.lang)) { dismiss() }
                 }
             }
+        }
+        .sheet(item: $editContext) { context in
+            PersonEditSheet(context: context)
         }
         .presentationDetents([.medium])
     }
