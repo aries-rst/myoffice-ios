@@ -5,6 +5,7 @@ enum PersonEditContext: Identifiable {
     case addReport(parentId: UUID)
     case addComanager(nodeId: UUID)
     case fillVacancy(nodeId: UUID)
+    case addSuperior
     case editPerson(nodeId: UUID, nameIndex: Int, currentName: String, currentTitle: String, showTitleField: Bool, currentPhone: String?, currentEmail: String?, currentTelegram: String?, currentWhatsapp: String?, currentPhotoData: Data?)
 
     var id: String {
@@ -12,6 +13,7 @@ enum PersonEditContext: Identifiable {
         case .addReport(let id): return "addReport-\(id)"
         case .addComanager(let id): return "addComanager-\(id)"
         case .fillVacancy(let id): return "fillVacancy-\(id)"
+        case .addSuperior: return "addSuperior"
         case .editPerson(let id, let idx, _, _, _, _, _, _, _, _): return "editPerson-\(id)-\(idx)"
         }
     }
@@ -35,7 +37,7 @@ struct PersonEditSheet: View {
 
     private var needsTitleField: Bool {
         switch context {
-        case .addReport: return true
+        case .addReport, .addSuperior: return true
         case .addComanager, .fillVacancy: return false
         case .editPerson(_, _, _, _, let showTitle, _, _, _, _, _): return showTitle
         }
@@ -43,7 +45,7 @@ struct PersonEditSheet: View {
 
     private var needsContactFields: Bool {
         switch context {
-        case .addReport, .fillVacancy: return true
+        case .addReport, .fillVacancy, .addSuperior: return true
         case .addComanager: return false
         case .editPerson(_, _, _, _, let showTitle, _, _, _, _, _): return showTitle
         }
@@ -54,6 +56,7 @@ struct PersonEditSheet: View {
         case .addReport: return isRussian ? "Новая должность" : "New position"
         case .addComanager: return isRussian ? "Добавить со-руководителя" : "Add co-manager"
         case .fillVacancy: return isRussian ? "Назначить сотрудника" : "Assign employee"
+        case .addSuperior: return isRussian ? "Добавить учредителя" : "Add founder"
         case .editPerson: return isRussian ? "Редактировать" : "Edit"
         }
     }
@@ -74,13 +77,11 @@ struct PersonEditSheet: View {
                             HStack {
                                 if let photoData, let uiImage = UIImage(data: photoData) {
                                     Image(uiImage: uiImage)
-                                        .resizable()
-                                        .scaledToFill()
+                                        .resizable().scaledToFill()
                                         .frame(width: 44, height: 44)
                                         .clipShape(Circle())
                                 } else {
-                                    Image(systemName: "photo.badge.plus")
-                                        .font(.system(size: 22))
+                                    Image(systemName: "photo.badge.plus").font(.system(size: 22))
                                 }
                                 Text(isRussian ? "Выбрать фото" : "Choose photo")
                             }
@@ -95,14 +96,10 @@ struct PersonEditSheet: View {
                     }
 
                     Section(isRussian ? "Контакты (необязательно)" : "Contacts (optional)") {
-                        TextField(isRussian ? "Телефон" : "Phone", text: $phone)
-                            .keyboardType(.phonePad)
-                        TextField("Email", text: $email)
-                            .keyboardType(.emailAddress)
-                            .autocapitalization(.none)
+                        TextField(isRussian ? "Телефон" : "Phone", text: $phone).keyboardType(.phonePad)
+                        TextField("Email", text: $email).keyboardType(.emailAddress).autocapitalization(.none)
                         TextField("Telegram", text: $telegram)
-                        TextField("WhatsApp", text: $whatsapp)
-                            .keyboardType(.phonePad)
+                        TextField("WhatsApp", text: $whatsapp).keyboardType(.phonePad)
                     }
                 }
             }
@@ -148,6 +145,12 @@ struct PersonEditSheet: View {
             app.addComanager(to: nodeId, name: trimmedName)
         case .fillVacancy(let nodeId):
             app.fillVacancy(nodeId, name: trimmedName, phone: phone, email: email, telegram: telegram, whatsapp: whatsapp, photoData: photoData)
+        case .addSuperior:
+            app.addSuperior(
+                name: trimmedName,
+                title: trimmedTitle.isEmpty ? (isRussian ? "Должность" : "Position") : trimmedTitle,
+                phone: phone, email: email, telegram: telegram, whatsapp: whatsapp, photoData: photoData
+            )
         case .editPerson(let nodeId, let nameIndex, _, _, let showTitle, _, _, _, _, _):
             app.updatePerson(
                 nodeId, nameIndex: nameIndex, name: trimmedName,
