@@ -20,10 +20,10 @@ enum UpsellContext {
 
 @MainActor
 final class AppState: ObservableObject {
-    @Published var lang: Lang = .ru
+    @Published var lang: Lang = .en
     @Published var tier: Tier = .free
     @Published var theme: WorkspaceTheme = .office
-    @Published var root: OrgNode = DemoOrg.root
+    @Published var root: OrgNode = OrgNode(names: [], title: "CEO", deptColor: .ceo)
 
     @Published var upsellContext: UpsellContext? = nil
     @Published var toastMessage: String? = nil
@@ -39,25 +39,21 @@ final class AppState: ObservableObject {
         toastMessage = text
     }
 
-    func addReport(to parentId: UUID) {
+    func addReport(to parentId: UUID, name: String, title: String) {
         guard canAddPerson else {
             upsellContext = .limit
             return
         }
-        let newNode = OrgNode(
-            names: [Strings.t(.newHireName, lang)],
-            title: Strings.t(.newHireTitle, lang)
-        )
+        let newNode = OrgNode(names: [name], title: title)
         root = root.appendingChild(to: parentId, newNode)
         showToast(Strings.t(.addedReport, lang))
     }
 
-    func addComanager(to nodeId: UUID) {
+    func addComanager(to nodeId: UUID, name: String) {
         guard canAddPerson else {
             upsellContext = .limit
             return
         }
-        let name = Strings.t(.newComanagerName, lang)
         root = root.updating(id: nodeId) { node in
             if node.names.count < 2 {
                 node.names.append(name)
@@ -67,18 +63,38 @@ final class AppState: ObservableObject {
     }
 
     func vacate(_ nodeId: UUID) {
-        root = root.updating(id: nodeId) { node in
-            node.names = []
+        guard let target = root.node(withId: nodeId) else { return }
+        if target.children.isEmpty && target.id != root.id {
+            root = root.removingNode(id: nodeId)
+        } else {
+            root = root.updating(id: nodeId) { node in
+                node.names = []
+            }
         }
         showToast(Strings.t(.vacated, lang))
     }
 
-    func fillVacancy(_ nodeId: UUID) {
-        let name = Strings.t(.newHireName, lang)
+    func fillVacancy(_ nodeId: UUID, name: String) {
+        guard canAddPerson else {
+            upsellContext = .limit
+            return
+        }
         root = root.updating(id: nodeId) { node in
             node.names = [name]
         }
         showToast(Strings.t(.hired, lang))
+    }
+
+    func updatePerson(_ nodeId: UUID, nameIndex: Int, name: String, title: String?) {
+        root = root.updating(id: nodeId) { node in
+            if node.names.indices.contains(nameIndex) {
+                node.names[nameIndex] = name
+            }
+            if let title = title {
+                node.title = title
+            }
+        }
+        showToast(lang == .ru ? "Сохранено" : "Saved")
     }
 
     func selectTheme(_ newTheme: WorkspaceTheme) {
