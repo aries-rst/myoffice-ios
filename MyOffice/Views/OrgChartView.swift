@@ -6,14 +6,15 @@ struct OrgChartView: View {
     @GestureState private var pinchDelta: CGFloat = 1.0
     @State private var menuNode: OrgNode? = nil
     @State private var detailNode: OrgNode? = nil
+    @State private var editContext: PersonEditContext? = nil
 
     var body: some View {
         ScrollView([.horizontal, .vertical]) {
-            NodeBranchView(node: app.root, onTap: { n in detailNode = n }, onMenu: { n in menuNode = n })
+            NodeBranchView(node: app.root, onTap: { n in handleTap(n) }, onMenu: { n in menuNode = n })
                 .padding(40)
                 .scaleEffect(zoom * pinchDelta)
         }
-        .gesture(
+        .simultaneousGesture(
             MagnificationGesture()
                 .updating($pinchDelta) { value, state, _ in
                     state = value
@@ -47,16 +48,16 @@ struct OrgChartView: View {
         ) {
             if let node = menuNode {
                 if node.isVacant {
-                    Button(Strings.t(.menuAddReport, app.lang)) {
-                        app.fillVacancy(node.id)
+                    Button(app.lang == .ru ? "Заполнить вакансию" : "Fill vacancy") {
+                        editContext = .fillVacancy(nodeId: node.id)
                     }
                 } else {
                     Button(Strings.t(.menuAddReport, app.lang)) {
-                        app.addReport(to: node.id)
+                        editContext = .addReport(parentId: node.id)
                     }
                     if !node.isComanaged {
                         Button(Strings.t(.menuAddComanager, app.lang)) {
-                            app.addComanager(to: node.id)
+                            editContext = .addComanager(nodeId: node.id)
                         }
                     }
                     Button(Strings.t(.menuDelete, app.lang), role: .destructive) {
@@ -68,6 +69,17 @@ struct OrgChartView: View {
         }
         .sheet(item: $detailNode) { node in
             EmployeeDetailSheet(node: node)
+        }
+        .sheet(item: $editContext) { context in
+            PersonEditSheet(context: context)
+        }
+    }
+
+    private func handleTap(_ node: OrgNode) {
+        if node.isVacant {
+            editContext = .fillVacancy(nodeId: node.id)
+        } else {
+            detailNode = node
         }
     }
 }
