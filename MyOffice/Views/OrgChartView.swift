@@ -4,16 +4,32 @@ struct OrgChartView: View {
     @EnvironmentObject var app: AppState
     @State private var zoom: CGFloat = 1.0
     @GestureState private var pinchDelta: CGFloat = 1.0
+    @State private var naturalSize: CGSize = .zero
     @State private var menuNode: OrgNode? = nil
     @State private var detailNode: OrgNode? = nil
     @State private var editContext: PersonEditContext? = nil
 
+    private var displayedZoom: CGFloat {
+        min(max(zoom * pinchDelta, 0.5), 2.5)
+    }
+
     var body: some View {
         ScrollView([.horizontal, .vertical]) {
-            NodeBranchView(node: app.root, onTap: { n in handleTap(n) }, onMenu: { n in menuNode = n })
-                .padding(40)
-                .scaleEffect(zoom * pinchDelta)
+            NodeBranchView(
+                node: app.root,
+                onTap: { n in n.isVacant ? (editContext = .fillVacancy(nodeId: n.id)) : (detailNode = n) },
+                onMenu: { n in menuNode = n }
+            )
+            .padding(40)
+            .background(
+                GeometryReader { geo in
+                    Color.clear.preference(key: OrgChartSizePreferenceKey.self, value: geo.size)
+                }
+            )
+            .scaleEffect(displayedZoom, anchor: .topLeading)
+            .frame(width: naturalSize.width * displayedZoom, height: naturalSize.height * displayedZoom)
         }
+        .onPreferenceChange(OrgChartSizePreferenceKey.self) { naturalSize = $0 }
         .simultaneousGesture(
             MagnificationGesture()
                 .updating($pinchDelta) { value, state, _ in
@@ -48,7 +64,7 @@ struct OrgChartView: View {
         ) {
             if let node = menuNode {
                 if node.isVacant {
-                    Button(app.lang == .ru ? "Заполнить вакансию" : "Fill vacancy") {
+                    Button(Strings.t(.menuAddReport, app.lang)) {
                         editContext = .fillVacancy(nodeId: node.id)
                     }
                 } else {
@@ -74,17 +90,16 @@ struct OrgChartView: View {
             PersonEditSheet(context: context)
         }
     }
+}
 
-    private func handleTap(_ node: OrgNode) {
-        if node.isVacant {
-            editContext = .fillVacancy(nodeId: node.id)
-        } else {
-            detailNode = node
-        }
+private struct OrgChartSizePreferenceKey: PreferenceKey {
+    static var defaultValue: CGSize = .zero
+    static func reduce(value: inout CGSize, nextValue: () -> CGSize) {
+        value = nextValue()
     }
 }
 
-private struct NodeBranchView: View {
+struct NodeBranchView: View {
     let node: OrgNode
     let onTap: (OrgNode) -> Void
     let onMenu: (OrgNode) -> Void
