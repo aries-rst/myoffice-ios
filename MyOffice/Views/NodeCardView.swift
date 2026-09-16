@@ -5,6 +5,9 @@ struct NodeCardView: View {
     let node: OrgNode
     var onTap: () -> Void
     var onMenu: () -> Void
+    var onEditName: (Int) -> Void = { _ in }
+
+    private var isRussian: Bool { app.lang == .ru }
 
     var accentColor: Color {
         switch node.deptColor {
@@ -28,9 +31,22 @@ struct NodeCardView: View {
                     }
                 } else {
                     VStack(alignment: .leading, spacing: 2) {
-                        ForEach(node.names, id: \.self) { name in
-                            Text(name)
-                                .font(.system(size: 14, weight: .semibold))
+                        ForEach(Array(node.names.enumerated()), id: \.offset) { index, name in
+                            HStack(spacing: 3) {
+                                Text(name)
+                                    .font(.system(size: 14, weight: .semibold))
+                                Menu {
+                                    Button {
+                                        onEditName(index)
+                                    } label: {
+                                        Label(isRussian ? "Изменить" : "Edit", systemImage: "pencil")
+                                    }
+                                } label: {
+                                    Image(systemName: "ellipsis.circle.fill")
+                                        .font(.system(size: 11))
+                                        .foregroundStyle(.secondary.opacity(0.6))
+                                }
+                            }
                         }
                     }
                 }
