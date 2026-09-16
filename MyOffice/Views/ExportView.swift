@@ -70,7 +70,7 @@ struct ExportView: View {
         let content = NodeBranchView(
             node: app.root,
             onTap: { _ in }, onMenu: { _ in }, onAddReport: { _ in },
-            accent: app.theme.accent, isRussian: isRussian
+            accent: app.theme.accent, isRussian: isRussian, showControls: false
         )
         .padding(30)
         .background(Color.white)
