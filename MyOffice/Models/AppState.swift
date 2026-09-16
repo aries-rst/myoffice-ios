@@ -23,6 +23,7 @@ final class AppState: ObservableObject {
     @Published var tier: Tier = .free { didSet { save() } }
     @Published var theme: WorkspaceTheme = .office
     @Published var root: OrgNode = OrgNode(names: [], title: "CEO", deptColor: .ceo) { didSet { save() } }
+    @Published var hasFounderTier: Bool = false { didSet { save() } }
 
     @Published var upsellContext: UpsellContext? = nil
     @Published var toastMessage: String? = nil
@@ -30,6 +31,7 @@ final class AppState: ObservableObject {
     private let rootKey = "myoffice.root"
     private let tierKey = "myoffice.tier"
     private let langKey = "myoffice.lang"
+    private let hasFounderTierKey = "myoffice.hasFounderTier"
 
     init() {
         load()
@@ -41,6 +43,7 @@ final class AppState: ObservableObject {
         }
         UserDefaults.standard.set(tier.rawValue, forKey: tierKey)
         UserDefaults.standard.set(lang == .ru ? "ru" : "en", forKey: langKey)
+        UserDefaults.standard.set(hasFounderTier, forKey: hasFounderTierKey)
     }
 
     private func load() {
@@ -55,6 +58,13 @@ final class AppState: ObservableObject {
         if let langRaw = UserDefaults.standard.string(forKey: langKey) {
             lang = langRaw == "ru" ? .ru : .en
         }
+        hasFounderTier = UserDefaults.standard.bool(forKey: hasFounderTierKey)
+    }
+
+    func resetAllData() {
+        root = OrgNode(names: [], title: "CEO", deptColor: .ceo)
+        hasFounderTier = false
+        showToast(lang == .ru ? "Данные очищены" : "Data cleared")
     }
 
     var employeeCount: Int { root.countAll() }
@@ -152,6 +162,7 @@ final class AppState: ObservableObject {
     }
 
     func addSuperior(name: String, title: String, phone: String, email: String, telegram: String, whatsapp: String, photoData: Data?) {
+        guard !hasFounderTier else { return }
         guard canAddPerson else {
             upsellContext = .limit
             return
@@ -167,6 +178,7 @@ final class AppState: ObservableObject {
             whatsapp: whatsapp.isEmpty ? nil : whatsapp,
             photoData: photoData
         )
+        hasFounderTier = true
         showToast(lang == .ru ? "Добавлено" : "Added")
     }
 
