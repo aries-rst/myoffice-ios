@@ -20,9 +20,12 @@ struct OrgChartView: View {
                         editContext = .addSuperior
                     } label: {
                         Text((isRussian ? "+ Добавить учредителей \"" : "+ Add founders of \"") + topName + "\"")
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.system(size: 12, weight: .bold))
+                            .padding(.horizontal, 12).padding(.vertical, 6)
+                            .background(app.theme.accent)
+                            .foregroundStyle(.white)
+                            .clipShape(Capsule())
                     }
-                    .foregroundStyle(app.theme.accent)
                 }
                 NodeBranchView(
                     node: app.root,
@@ -101,16 +104,21 @@ struct NodeBranchView: View {
             NodeCardView(node: node, onTap: { onTap(node) }, onMenu: { onMenu(node) })
 
             if !node.isVacant {
-                HStack(spacing: 14) {
+                HStack(spacing: 10) {
                     Button { onAddReport(node) } label: {
                         Text(isRussian ? "+ подчинённый" : "+ report")
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.system(size: 11, weight: .bold))
+                            .padding(.horizontal, 10).padding(.vertical, 5)
+                            .background(accent)
+                            .foregroundStyle(.white)
+                            .clipShape(Capsule())
                     }
                     Button { onMenu(node) } label: {
-                        Image(systemName: "ellipsis").font(.system(size: 13, weight: .bold))
+                        Image(systemName: "ellipsis.circle.fill")
+                            .font(.system(size: 22))
+                            .foregroundStyle(accent)
                     }
                 }
-                .foregroundStyle(accent)
             }
 
             if !node.children.isEmpty {
