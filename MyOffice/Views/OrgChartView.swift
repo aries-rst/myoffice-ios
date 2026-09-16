@@ -18,7 +18,7 @@ struct OrgChartView: View {
         GeometryReader { outer in
             ZStack {
                 VStack(spacing: 10) {
-                    if let topName = app.root.names.first, !topName.isEmpty {
+                    if !app.hasFounderTier, let topName = app.root.names.first, !topName.isEmpty {
                         Button {
                             editContext = .addSuperior
                         } label: {
@@ -35,18 +35,6 @@ struct OrgChartView: View {
                         onTap: { n in n.isVacant ? (editContext = .fillVacancy(nodeId: n.id)) : (detailNode = n) },
                         onMenu: { n in menuNode = n },
                         onAddReport: { n in editContext = n.isVacant ? .fillVacancy(nodeId: n.id) : .addReport(parentId: n.id) },
-                        onEditName: { n, index in
-                            editContext = .editPerson(
-                                nodeId: n.id, nameIndex: index,
-                                currentName: n.names[index], currentTitle: n.title,
-                                showTitleField: index == 0,
-                                currentPhone: index == 0 ? n.phone : nil,
-                                currentEmail: index == 0 ? n.email : nil,
-                                currentTelegram: index == 0 ? n.telegram : nil,
-                                currentWhatsapp: index == 0 ? n.whatsapp : nil,
-                                currentPhotoData: index == 0 ? n.photoData : nil
-                            )
-                        },
                         accent: app.theme.accent,
                         isRussian: isRussian
                     )
@@ -129,29 +117,20 @@ struct OrgChartView: View {
     }
 }
 
-private struct ChildXPreferenceKey: PreferenceKey {
-    static var defaultValue: [CGFloat] = []
-    static func reduce(value: inout [CGFloat], nextValue: () -> [CGFloat]) {
-        value.append(contentsOf: nextValue())
-    }
-}
-
 struct NodeBranchView: View {
     let node: OrgNode
     let onTap: (OrgNode) -> Void
     let onMenu: (OrgNode) -> Void
     let onAddReport: (OrgNode) -> Void
-    var onEditName: (OrgNode, Int) -> Void = { _, _ in }
     let accent: Color
     let isRussian: Bool
-
-    @State private var childXs: [CGFloat] = []
+    var showControls: Bool = true
 
     var body: some View {
         VStack(spacing: 8) {
-            NodeCardView(node: node, onTap: { onTap(node) }, onMenu: { onMenu(node) }, onEditName: { index in onEditName(node, index) })
+            NodeCardView(node: node, onTap: { onTap(node) }, onMenu: { onMenu(node) })
 
-            if !node.isVacant {
+            if showControls, !node.isVacant {
                 HStack(spacing: 10) {
                     Button { onAddReport(node) } label: {
                         Text(isRussian ? "+ подчинённый" : "+ report")
@@ -171,38 +150,11 @@ struct NodeBranchView: View {
 
             if !node.children.isEmpty {
                 Rectangle().fill(accent.opacity(0.3)).frame(width: 2, height: 14)
-                VStack(spacing: 0) {
-                    ZStack(alignment: .topLeading) {
-                        Color.clear.frame(height: 14)
-                        Canvas { context, size in
-                            guard !childXs.isEmpty else { return }
-                            if childXs.count > 1, let minX = childXs.min(), let maxX = childXs.max() {
-                                var bar = Path()
-                                bar.move(to: CGPoint(x: minX, y: 0))
-                                bar.addLine(to: CGPoint(x: maxX, y: 0))
-                                context.stroke(bar, with: .color(accent.opacity(0.35)), lineWidth: 2)
-                            }
-                            for x in childXs {
-                                var stub = Path()
-                                stub.move(to: CGPoint(x: x, y: 0))
-                                stub.addLine(to: CGPoint(x: x, y: size.height))
-                                context.stroke(stub, with: .color(accent.opacity(0.35)), lineWidth: 2)
-                            }
-                        }
-                    }
-                    HStack(alignment: .top, spacing: 28) {
-                        ForEach(node.children) { child in
-                            NodeBranchView(node: child, onTap: onTap, onMenu: onMenu, onAddReport: onAddReport, onEditName: onEditName, accent: accent, isRussian: isRussian)
-                                .background(
-                                    GeometryReader { g in
-                                        Color.clear.preference(key: ChildXPreferenceKey.self, value: [g.frame(in: .named("orgBranchChildren")).midX])
-                                    }
-                                )
-                        }
+                HStack(alignment: .top, spacing: 28) {
+                    ForEach(node.children) { child in
+                        NodeBranchView(node: child, onTap: onTap, onMenu: onMenu, onAddReport: onAddReport, accent: accent, isRussian: isRussian, showControls: showControls)
                     }
                 }
-                .coordinateSpace(name: "orgBranchChildren")
-                .onPreferenceChange(ChildXPreferenceKey.self) { childXs = $0.sorted() }
             }
         }
     }
