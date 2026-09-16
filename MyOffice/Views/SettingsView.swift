@@ -2,6 +2,9 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject var app: AppState
+    @State private var showResetConfirm = false
+
+    private var isRussian: Bool { app.lang == .ru }
 
     var body: some View {
         Form {
@@ -49,8 +52,31 @@ struct SettingsView: View {
                 }
                 .pickerStyle(.segmented)
             }
+
+            Section {
+                Button(role: .destructive) {
+                    showResetConfirm = true
+                } label: {
+                    Text(isRussian ? "Очистить все данные" : "Clear all data")
+                        .frame(maxWidth: .infinity)
+                }
+            } footer: {
+                Text(isRussian
+                     ? "Удалит всю структуру и сотрудников. Покупки и тема останутся."
+                     : "Removes the whole org chart and employees. Your purchase and theme stay.")
+            }
         }
         .navigationTitle(Strings.t(.settingsTitle, app.lang))
+        .alert(isRussian ? "Очистить все данные?" : "Clear all data?", isPresented: $showResetConfirm) {
+            Button(isRussian ? "Отмена" : "Cancel", role: .cancel) {}
+            Button(isRussian ? "Очистить" : "Clear", role: .destructive) {
+                app.resetAllData()
+            }
+        } message: {
+            Text(isRussian
+                 ? "Это действие нельзя отменить."
+                 : "This can't be undone.")
+        }
     }
 }
 
