@@ -128,10 +128,14 @@ struct ExportView: View {
 
     private func csvRows(from node: OrgNode, depth: Int = 0) -> [String] {
         var rows: [String] = []
-        if depth > 0 || !node.names.isEmpty {
+        if depth > 0 || !node.people.isEmpty {
             let indent = String(repeating: "  ", count: depth)
-            let names = node.names.joined(separator: " & ")
-            rows.append("\"\(indent)\(names)\",\"\(node.title)\",\"\(node.phone ?? "")\",\"\(node.email ?? "")\",\"\(node.telegram ?? "")\",\"\(node.whatsapp ?? "")\"")
+            let names = node.people.map { $0.name }.joined(separator: " & ")
+            let phones = node.people.compactMap { $0.phone }.joined(separator: " & ")
+            let emails = node.people.compactMap { $0.email }.joined(separator: " & ")
+            let telegrams = node.people.compactMap { $0.telegram }.joined(separator: " & ")
+            let whatsapps = node.people.compactMap { $0.whatsapp }.joined(separator: " & ")
+            rows.append("\"\(indent)\(names)\",\"\(node.title)\",\"\(phones)\",\"\(emails)\",\"\(telegrams)\",\"\(whatsapps)\"")
         }
         for child in node.children {
             rows.append(contentsOf: csvRows(from: child, depth: depth + 1))
