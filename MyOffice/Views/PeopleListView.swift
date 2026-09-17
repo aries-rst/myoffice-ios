@@ -18,7 +18,7 @@ struct PeopleListView: View {
     var filtered: [OrgNode] {
         guard !query.isEmpty else { return flattened }
         return flattened.filter { node in
-            node.names.contains { $0.localizedCaseInsensitiveContains(query) } ||
+            node.people.contains { $0.name.localizedCaseInsensitiveContains(query) } ||
             node.title.localizedCaseInsensitiveContains(query)
         }
     }
@@ -29,7 +29,7 @@ struct PeopleListView: View {
                 detailNode = node
             } label: {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(node.names.joined(separator: " / "))
+                    Text(node.people.map { $0.name }.joined(separator: " / "))
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(.primary)
                     Text(node.title)
