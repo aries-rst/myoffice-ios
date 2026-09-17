@@ -5,6 +5,9 @@ struct NodeCardView: View {
     let node: OrgNode
     var onTap: () -> Void
     var onMenu: () -> Void
+    var showControls: Bool = true
+
+    private var isRussian: Bool { app.lang == .ru }
 
     var accentColor: Color {
         switch node.deptColor {
@@ -28,20 +31,34 @@ struct NodeCardView: View {
                     }
                 } else {
                     VStack(alignment: .leading, spacing: 2) {
-                        ForEach(node.names, id: \.self) { name in
-                            Text(name)
+                        ForEach(node.people) { person in
+                            Text(person.name)
                                 .font(.system(size: 14, weight: .semibold))
                         }
                     }
                 }
                 Spacer(minLength: 8)
-                Button(action: onMenu) {
-                    Image(systemName: "ellipsis.circle")
-                        .foregroundStyle(.secondary)
+                if showControls, !node.isVacant {
+                    Button(action: onMenu) {
+                        Image(systemName: "ellipsis.circle")
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
-            if !node.isVacant {
+            if node.isVacant {
+                if showControls {
+                    Button(action: onTap) {
+                        Label(isRussian ? "Заполнить должность" : "Fill position", systemImage: "plus.circle.fill")
+                            .font(.system(size: 12, weight: .bold))
+                            .padding(.horizontal, 10).padding(.vertical, 6)
+                            .background(accentColor)
+                            .foregroundStyle(.white)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            } else {
                 Text(node.title)
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
