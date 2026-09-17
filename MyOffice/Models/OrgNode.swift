@@ -4,12 +4,9 @@ enum ColorTag: String, Hashable, Codable {
     case sales, tech, ceo
 }
 
-struct OrgNode: Identifiable, Hashable, Codable {
-    let id: UUID
-    var names: [String]
-    var title: String
-    var deptColor: ColorTag?
-    var children: [OrgNode]
+struct OrgPerson: Identifiable, Hashable, Codable {
+    var id: String
+    var name: String
     var phone: String?
     var email: String?
     var telegram: String?
@@ -17,11 +14,8 @@ struct OrgNode: Identifiable, Hashable, Codable {
     var photoData: Data?
 
     init(
-        id: UUID = UUID(),
-        names: [String],
-        title: String,
-        deptColor: ColorTag? = nil,
-        children: [OrgNode] = [],
+        id: String = UUID().uuidString,
+        name: String,
         phone: String? = nil,
         email: String? = nil,
         telegram: String? = nil,
@@ -29,19 +23,38 @@ struct OrgNode: Identifiable, Hashable, Codable {
         photoData: Data? = nil
     ) {
         self.id = id
-        self.names = names
-        self.title = title
-        self.deptColor = deptColor
-        self.children = children
+        self.name = name
         self.phone = phone
         self.email = email
         self.telegram = telegram
         self.whatsapp = whatsapp
         self.photoData = photoData
     }
+}
 
-    var isVacant: Bool { names.isEmpty }
-    var isComanaged: Bool { names.count == 2 }
+struct OrgNode: Identifiable, Hashable, Codable {
+    let id: UUID
+    var people: [OrgPerson]
+    var title: String
+    var deptColor: ColorTag?
+    var children: [OrgNode]
+
+    init(
+        id: UUID = UUID(),
+        people: [OrgPerson],
+        title: String,
+        deptColor: ColorTag? = nil,
+        children: [OrgNode] = []
+    ) {
+        self.id = id
+        self.people = people
+        self.title = title
+        self.deptColor = deptColor
+        self.children = children
+    }
+
+    var isVacant: Bool { people.isEmpty }
+    var isComanaged: Bool { people.count == 2 }
 }
 
 extension OrgNode {
@@ -73,7 +86,7 @@ extension OrgNode {
     }
 
     func countAll() -> Int {
-        names.count + children.reduce(0) { $0 + $1.countAll() }
+        people.count + children.reduce(0) { $0 + $1.countAll() }
     }
 
     func node(withId targetId: UUID) -> OrgNode? {
