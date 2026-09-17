@@ -21,8 +21,8 @@ enum UpsellContext {
 final class AppState: ObservableObject {
     @Published var lang: Lang = .en { didSet { save() } }
     @Published var tier: Tier = .free { didSet { save() } }
-    @Published var theme: WorkspaceTheme = .office
-    @Published var root: OrgNode = OrgNode(names: [], title: "CEO", deptColor: .ceo) { didSet { save() } }
+    @Published var theme: WorkspaceTheme = .office { didSet { save() } }
+    @Published var root: OrgNode = OrgNode(people: [], title: "CEO", deptColor: .ceo) { didSet { save() } }
     @Published var hasFounderTier: Bool = false { didSet { save() } }
 
     @Published var upsellContext: UpsellContext? = nil
@@ -32,6 +32,7 @@ final class AppState: ObservableObject {
     private let tierKey = "myoffice.tier"
     private let langKey = "myoffice.lang"
     private let hasFounderTierKey = "myoffice.hasFounderTier"
+    private let themeKey = "myoffice.theme"
 
     init() {
         load()
@@ -44,6 +45,7 @@ final class AppState: ObservableObject {
         UserDefaults.standard.set(tier.rawValue, forKey: tierKey)
         UserDefaults.standard.set(lang == .ru ? "ru" : "en", forKey: langKey)
         UserDefaults.standard.set(hasFounderTier, forKey: hasFounderTierKey)
+        UserDefaults.standard.set(theme.rawValue, forKey: themeKey)
     }
 
     private func load() {
@@ -59,10 +61,14 @@ final class AppState: ObservableObject {
             lang = langRaw == "ru" ? .ru : .en
         }
         hasFounderTier = UserDefaults.standard.bool(forKey: hasFounderTierKey)
+        if let themeRaw = UserDefaults.standard.string(forKey: themeKey),
+           let decodedTheme = WorkspaceTheme(rawValue: themeRaw) {
+            theme = decodedTheme
+        }
     }
 
     func resetAllData() {
-        root = OrgNode(names: [], title: "CEO", deptColor: .ceo)
+        root = OrgNode(people: [], title: "CEO", deptColor: .ceo)
         hasFounderTier = false
         showToast(lang == .ru ? "Данные очищены" : "Data cleared")
     }
@@ -84,13 +90,15 @@ final class AppState: ObservableObject {
             return
         }
         let newNode = OrgNode(
-            names: [name],
-            title: title,
-            phone: phone.isEmpty ? nil : phone,
-            email: email.isEmpty ? nil : email,
-            telegram: telegram.isEmpty ? nil : telegram,
-            whatsapp: whatsapp.isEmpty ? nil : whatsapp,
-            photoData: photoData
+            people: [OrgPerson(
+                name: name,
+                phone: phone.isEmpty ? nil : phone,
+                email: email.isEmpty ? nil : email,
+                telegram: telegram.isEmpty ? nil : telegram,
+                whatsapp: whatsapp.isEmpty ? nil : whatsapp,
+                photoData: photoData
+            )],
+            title: title
         )
         root = root.appendingChild(to: parentId, newNode)
         showToast(Strings.t(.addedReport, lang))
@@ -102,8 +110,8 @@ final class AppState: ObservableObject {
             return
         }
         root = root.updating(id: nodeId) { node in
-            if node.names.count < 2 {
-                node.names.append(name)
+            if node.people.count < 2 {
+                node.people.append(OrgPerson(name: name))
             }
         }
         showToast(Strings.t(.addedComanager, lang))
@@ -115,12 +123,7 @@ final class AppState: ObservableObject {
             root = root.removingNode(id: nodeId)
         } else {
             root = root.updating(id: nodeId) { node in
-                node.names = []
-                node.phone = nil
-                node.email = nil
-                node.telegram = nil
-                node.whatsapp = nil
-                node.photoData = nil
+                node.people = []
             }
         }
         showToast(Strings.t(.vacated, lang))
@@ -132,30 +135,30 @@ final class AppState: ObservableObject {
             return
         }
         root = root.updating(id: nodeId) { node in
-            node.names = [name]
-            node.phone = phone.isEmpty ? nil : phone
-            node.email = email.isEmpty ? nil : email
-            node.telegram = telegram.isEmpty ? nil : telegram
-            node.whatsapp = whatsapp.isEmpty ? nil : whatsapp
-            node.photoData = photoData
+            node.people = [OrgPerson(
+                name: name,
+                phone: phone.isEmpty ? nil : phone,
+                email: email.isEmpty ? nil : email,
+                telegram: telegram.isEmpty ? nil : telegram,
+                whatsapp: whatsapp.isEmpty ? nil : whatsapp,
+                photoData: photoData
+            )]
         }
         showToast(Strings.t(.hired, lang))
     }
 
-    func updatePerson(_ nodeId: UUID, nameIndex: Int, name: String, title: String?, updateContacts: Bool, phone: String, email: String, telegram: String, whatsapp: String, photoData: Data?) {
+    func updatePerson(_ nodeId: UUID, personId: String, name: String, title: String?, phone: String, email: String, telegram: String, whatsapp: String, photoData: Data?) {
         root = root.updating(id: nodeId) { node in
-            if node.names.indices.contains(nameIndex) {
-                node.names[nameIndex] = name
+            if let idx = node.people.firstIndex(where: { $0.id == personId }) {
+                node.people[idx].name = name
+                node.people[idx].phone = phone.isEmpty ? nil : phone
+                node.people[idx].email = email.isEmpty ? nil : email
+                node.people[idx].telegram = telegram.isEmpty ? nil : telegram
+                node.people[idx].whatsapp = whatsapp.isEmpty ? nil : whatsapp
+                node.people[idx].photoData = photoData
             }
             if let title = title {
                 node.title = title
-            }
-            if updateContacts {
-                node.phone = phone.isEmpty ? nil : phone
-                node.email = email.isEmpty ? nil : email
-                node.telegram = telegram.isEmpty ? nil : telegram
-                node.whatsapp = whatsapp.isEmpty ? nil : whatsapp
-                node.photoData = photoData
             }
         }
         showToast(lang == .ru ? "Сохранено" : "Saved")
@@ -168,15 +171,17 @@ final class AppState: ObservableObject {
             return
         }
         root = OrgNode(
-            names: [name],
+            people: [OrgPerson(
+                name: name,
+                phone: phone.isEmpty ? nil : phone,
+                email: email.isEmpty ? nil : email,
+                telegram: telegram.isEmpty ? nil : telegram,
+                whatsapp: whatsapp.isEmpty ? nil : whatsapp,
+                photoData: photoData
+            )],
             title: title,
             deptColor: .ceo,
-            children: [root],
-            phone: phone.isEmpty ? nil : phone,
-            email: email.isEmpty ? nil : email,
-            telegram: telegram.isEmpty ? nil : telegram,
-            whatsapp: whatsapp.isEmpty ? nil : whatsapp,
-            photoData: photoData
+            children: [root]
         )
         hasFounderTier = true
         showToast(lang == .ru ? "Добавлено" : "Added")
