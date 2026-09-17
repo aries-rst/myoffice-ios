@@ -18,7 +18,7 @@ struct OrgChartView: View {
         GeometryReader { outer in
             ZStack {
                 VStack(spacing: 10) {
-                    if !app.hasFounderTier, let topName = app.root.names.first, !topName.isEmpty {
+                    if !app.hasFounderTier, let topName = app.root.people.first?.name, !topName.isEmpty {
                         Button {
                             editContext = .addSuperior
                         } label: {
@@ -36,10 +36,12 @@ struct OrgChartView: View {
                         onMenu: { n in menuNode = n },
                         onAddReport: { n in editContext = n.isVacant ? .fillVacancy(nodeId: n.id) : .addReport(parentId: n.id) },
                         accent: app.theme.accent,
-                        isRussian: isRussian
+                        isRussian: isRussian,
+                        suppressAddReport: app.hasFounderTier
                     )
                 }
                 .padding(40)
+                .fixedSize()
                 .scaleEffect(scale)
                 .offset(offset)
             }
@@ -125,20 +127,23 @@ struct NodeBranchView: View {
     let accent: Color
     let isRussian: Bool
     var showControls: Bool = true
+    var suppressAddReport: Bool = false
 
     var body: some View {
         VStack(spacing: 8) {
-            NodeCardView(node: node, onTap: { onTap(node) }, onMenu: { onMenu(node) })
+            NodeCardView(node: node, onTap: { onTap(node) }, onMenu: { onMenu(node) }, showControls: showControls)
 
             if showControls, !node.isVacant {
                 HStack(spacing: 10) {
-                    Button { onAddReport(node) } label: {
-                        Text(isRussian ? "+ подчинённый" : "+ report")
-                            .font(.system(size: 11, weight: .bold))
-                            .padding(.horizontal, 10).padding(.vertical, 5)
-                            .background(accent)
-                            .foregroundStyle(.white)
-                            .clipShape(Capsule())
+                    if !suppressAddReport {
+                        Button { onAddReport(node) } label: {
+                            Text(isRussian ? "+ подчинённый" : "+ report")
+                                .font(.system(size: 11, weight: .bold))
+                                .padding(.horizontal, 10).padding(.vertical, 5)
+                                .background(accent)
+                                .foregroundStyle(.white)
+                                .clipShape(Capsule())
+                        }
                     }
                     Button { onMenu(node) } label: {
                         Image(systemName: "ellipsis.circle.fill")
