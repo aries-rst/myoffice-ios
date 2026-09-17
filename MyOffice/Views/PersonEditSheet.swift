@@ -6,7 +6,7 @@ enum PersonEditContext: Identifiable {
     case addComanager(nodeId: UUID)
     case fillVacancy(nodeId: UUID)
     case addSuperior
-    case editPerson(nodeId: UUID, nameIndex: Int, currentName: String, currentTitle: String, showTitleField: Bool, currentPhone: String?, currentEmail: String?, currentTelegram: String?, currentWhatsapp: String?, currentPhotoData: Data?)
+    case editPerson(nodeId: UUID, personId: String, currentName: String, currentTitle: String, showTitleField: Bool, currentPhone: String?, currentEmail: String?, currentTelegram: String?, currentWhatsapp: String?, currentPhotoData: Data?)
 
     var id: String {
         switch self {
@@ -14,7 +14,7 @@ enum PersonEditContext: Identifiable {
         case .addComanager(let id): return "addComanager-\(id)"
         case .fillVacancy(let id): return "fillVacancy-\(id)"
         case .addSuperior: return "addSuperior"
-        case .editPerson(let id, let idx, _, _, _, _, _, _, _, _): return "editPerson-\(id)-\(idx)"
+        case .editPerson(let id, let personId, _, _, _, _, _, _, _, _): return "editPerson-\(id)-\(personId)"
         }
     }
 }
@@ -45,9 +45,8 @@ struct PersonEditSheet: View {
 
     private var needsContactFields: Bool {
         switch context {
-        case .addReport, .fillVacancy, .addSuperior: return true
+        case .addReport, .fillVacancy, .addSuperior, .editPerson: return true
         case .addComanager: return false
-        case .editPerson(_, _, _, _, let showTitle, _, _, _, _, _): return showTitle
         }
     }
 
@@ -151,10 +150,10 @@ struct PersonEditSheet: View {
                 title: trimmedTitle.isEmpty ? (isRussian ? "Должность" : "Position") : trimmedTitle,
                 phone: phone, email: email, telegram: telegram, whatsapp: whatsapp, photoData: photoData
             )
-        case .editPerson(let nodeId, let nameIndex, _, _, let showTitle, _, _, _, _, _):
+        case .editPerson(let nodeId, let personId, _, _, let showTitle, _, _, _, _, _):
             app.updatePerson(
-                nodeId, nameIndex: nameIndex, name: trimmedName,
-                title: showTitle ? trimmedTitle : nil, updateContacts: showTitle,
+                nodeId, personId: personId, name: trimmedName,
+                title: showTitle ? trimmedTitle : nil,
                 phone: phone, email: email, telegram: telegram, whatsapp: whatsapp, photoData: photoData
             )
         }
