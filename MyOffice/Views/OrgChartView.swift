@@ -76,6 +76,13 @@ struct OrgChartView: View {
         }
         .clipped()
         .background(app.theme.accent.opacity(0.06))
+        .onChange(of: app.root.id) { _ in
+            // The root identity only changes on a full data reset or when a founders
+            // tier is added above the old root — recenter so the (possibly tiny, now
+            // empty) chart isn't left scrolled/zoomed out of view from before.
+            scale = 1.0; lastScale = 1.0
+            offset = .zero; lastOffset = .zero
+        }
         .navigationTitle(Strings.t(.orgTitle, app.lang))
         .toolbar {
             ToolbarItemGroup(placement: .navigationBarTrailing) {
