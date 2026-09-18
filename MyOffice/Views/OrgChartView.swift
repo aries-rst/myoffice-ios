@@ -75,6 +75,7 @@ struct OrgChartView: View {
             }
         }
         .clipped()
+        .background(app.theme.accent.opacity(0.06))
         .navigationTitle(Strings.t(.orgTitle, app.lang))
         .toolbar {
             ToolbarItemGroup(placement: .navigationBarTrailing) {
