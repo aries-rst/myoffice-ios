@@ -1,5 +1,3 @@
-Output
-
 import SwiftUI
 
 struct OrgChartView: View {
