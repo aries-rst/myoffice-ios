@@ -1,3 +1,5 @@
+Output
+
 import SwiftUI
 
 struct OrgChartView: View {
@@ -24,6 +26,7 @@ struct OrgChartView: View {
                         } label: {
                             Text((isRussian ? "+ Добавить учредителей \"" : "+ Add founders of \"") + topName + "\"")
                                 .font(.system(size: 12, weight: .bold))
+                                .fixedSize()
                                 .padding(.horizontal, 12).padding(.vertical, 6)
                                 .background(app.theme.accent)
                                 .foregroundStyle(.white)
@@ -139,6 +142,7 @@ struct NodeBranchView: View {
                         Button { onAddReport(node) } label: {
                             Text(isRussian ? "+ подчинённый" : "+ report")
                                 .font(.system(size: 11, weight: .bold))
+                                .fixedSize()
                                 .padding(.horizontal, 10).padding(.vertical, 5)
                                 .background(accent)
                                 .foregroundStyle(.white)
