@@ -31,6 +31,7 @@ enum L: String {
     case scopeGroup, includeFoundersToggle, limitDepthToggle, depthStepper
     case pdfStyleGroup, pdfStyleChart, pdfStyleList, paperSizeGroup
     case branchExportAction, branchExportTitle
+    case posterModeToggle
 }
 
 enum Strings {
@@ -70,6 +71,7 @@ enum Strings {
         .pdfStyleGroup: "Стиль PDF", .pdfStyleChart: "Схема", .pdfStyleList: "Список",
         .paperSizeGroup: "Размер листа",
         .branchExportAction: "Экспортировать эту ветку", .branchExportTitle: "Экспорт ветки",
+        .posterModeToggle: "Плакат (в реальном размере, несколько листов)",
     ]
 
     private static let en: [L: String] = [
@@ -108,6 +110,7 @@ enum Strings {
         .pdfStyleGroup: "PDF style", .pdfStyleChart: "Chart", .pdfStyleList: "List",
         .paperSizeGroup: "Paper size",
         .branchExportAction: "Export this branch", .branchExportTitle: "Branch export",
+        .posterModeToggle: "Poster (full size, multiple sheets)",
     ]
 
     static func t(_ key: L, _ lang: Lang) -> String {
