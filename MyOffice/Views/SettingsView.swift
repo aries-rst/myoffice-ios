@@ -148,6 +148,11 @@ struct SettingsView: View {
                          : "Export saves the whole chart (founders and positions) into one CSV file — columns Level, Founder, GroupID, Name, Title, Phone, Email, Telegram, WhatsApp. The same file (with its row order unchanged) can later be imported back — this FULLY replaces the current data. Photos don't travel through CSV.")
                         .font(.system(size: 12))
                         .foregroundStyle(.secondary)
+                    Text(isRussian
+                         ? "Большую структуру удобнее сначала набрать в Excel/Google Таблицах с теми же колонками (по одному сотруднику в строке, порядок строк как в дереве), а затем сохранить/экспортировать этот файл как CSV (UTF-8) и импортировать его сюда."
+                         : "For a large chart, it's easier to first build the table in Excel/Google Sheets using the same columns (one employee per row, in the same order as the tree), then save/export that file as CSV (UTF-8) and import it here.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
                 }
             }
 
