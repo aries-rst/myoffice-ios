@@ -4,11 +4,25 @@ import UIKit
 struct ExportView: View {
     @EnvironmentObject var app: AppState
     @State private var format: String = "PDF"
+    @State private var pdfStyle: PDFStyle = .chart
+    @State private var paperSize: PaperSize = .a4
+    @State private var includeFounders = true
+    @State private var limitDepth = false
+    @State private var depthValue = 3
     @State private var shareItem: ShareItem?
+    @State private var sizeWarning: String?
 
     let formats = ["PDF", "PNG", "CSV"]
 
     private var isRussian: Bool { app.lang == .ru }
+    private var maxPossibleDepth: Int { max(1, app.root.maxDepth()) }
+
+    private var effectiveRoot: OrgNode {
+        limitDepth ? app.root.truncated(toDepth: depthValue) : app.root
+    }
+    private var effectiveFounders: [OrgPerson] {
+        includeFounders ? app.founders : []
+    }
 
     var body: some View {
         Form {
@@ -19,6 +33,41 @@ struct ExportView: View {
                     }
                 }
                 .pickerStyle(.segmented)
+            }
+
+            if format != "CSV" {
+                Section(Strings.t(.scopeGroup, app.lang)) {
+                    Toggle(Strings.t(.includeFoundersToggle, app.lang), isOn: $includeFounders)
+                    Toggle(Strings.t(.limitDepthToggle, app.lang), isOn: $limitDepth)
+                    if limitDepth {
+                        Stepper("\(Strings.t(.depthStepper, app.lang)): \(depthValue)", value: $depthValue, in: 1...maxPossibleDepth)
+                    }
+                }
+            }
+
+            if format == "PDF" {
+                Section(Strings.t(.pdfStyleGroup, app.lang)) {
+                    Picker(Strings.t(.pdfStyleGroup, app.lang), selection: $pdfStyle) {
+                        Text(Strings.t(.pdfStyleChart, app.lang)).tag(PDFStyle.chart)
+                        Text(Strings.t(.pdfStyleList, app.lang)).tag(PDFStyle.list)
+                    }
+                    .pickerStyle(.segmented)
+
+                    Picker(Strings.t(.paperSizeGroup, app.lang), selection: $paperSize) {
+                        ForEach(PaperSize.allCases) { size in
+                            Text(size.label).tag(size)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+
+                    if pdfStyle == .chart {
+                        Text(isRussian
+                             ? "Большая схема автоматически разбивается на несколько листов выбранного размера — распечатайте и склейте в один плакат."
+                             : "A large chart is automatically split across several sheets of the chosen size — print and join them into one poster.")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                    }
+                }
             }
 
             Section {
@@ -71,12 +120,19 @@ struct ExportView: View {
         .sheet(item: $shareItem) { item in
             ShareSheet(activityItems: [item.url])
         }
+        .alert(isRussian ? "Слишком крупная структура" : "Structure too large", isPresented: Binding(
+            get: { sizeWarning != nil }, set: { if !$0 { sizeWarning = nil } }
+        )) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(sizeWarning ?? "")
+        }
     }
 
     private func export() {
         switch format {
         case "PDF": exportPDF()
-        case "PNG": exportPNG()
+        case "PNG": exportPNGFlow()
         default:
             guard app.canUseCSVTransfer else {
                 app.upsellContext = .csvFeature
@@ -84,84 +140,51 @@ struct ExportView: View {
             }
             exportCSV()
         }
+    }
+
+    // MARK: - PNG
+
+    private func exportPNGFlow() {
+        let count = ChartExporter.personCount(founders: effectiveFounders, root: effectiveRoot)
+        guard count <= ChartExporter.pngSafeLimit else {
+            sizeWarning = isRussian
+                ? "В структуре \(count) человек — для PNG это слишком много (лимит ~\(ChartExporter.pngSafeLimit)). Используйте PDF (схему или список), ограничьте по уровням или экспортируйте отдельную ветку."
+                : "This scope has \(count) people — too many for a single PNG (limit ~\(ChartExporter.pngSafeLimit)). Use PDF (chart or list), limit by levels, or export a single branch instead."
+            return
+        }
+        guard let image = ChartExporter.renderChartImage(app: app, founders: effectiveFounders, root: effectiveRoot, scale: 3) else { return }
+        let final = ChartExporter.watermarked(image, show: app.tier == .free)
+        guard let url = ChartExporter.writePNG(final, filenamePrefix: "org-chart") else { return }
+        shareItem = ShareItem(url: url)
         app.showToast(Strings.t(.exportStarted, app.lang))
     }
 
-    // MARK: - Image rendering
-
-    @MainActor
-    private func renderImage() -> UIImage? {
-        let content = VStack(spacing: 10) {
-            if !app.founders.isEmpty {
-                HStack(spacing: 10) {
-                    ForEach(app.founders) { founder in
-                        VStack(spacing: 4) {
-                            AvatarView(photoData: founder.photoData, diameter: 34)
-                            Text(founder.name).font(.system(size: 12, weight: .semibold)).fixedSize()
-                        }
-                        .padding(8)
-                        .background(Color.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                    }
-                }
-                Rectangle().fill(app.theme.accent.opacity(0.3)).frame(width: 2, height: 14)
-            }
-            NodeBranchView(
-                node: app.root,
-                onTap: { _ in }, onMenu: { _ in }, onAddReport: { _ in },
-                accent: app.theme.accent, isRussian: isRussian, showControls: false
-            )
-        }
-        .padding(30)
-        .background(Color.white)
-        .environmentObject(app)
-        let renderer = ImageRenderer(content: content)
-        renderer.scale = 3
-        return renderer.uiImage
-    }
-
-    private func watermarked(_ image: UIImage) -> UIImage {
-        guard app.tier == .free else { return image }
-        let renderer = UIGraphicsImageRenderer(size: image.size)
-        return renderer.image { ctx in
-            image.draw(at: .zero)
-            let text = "MyOffice · FREE" as NSString
-            let attrs: [NSAttributedString.Key: Any] = [
-                .font: UIFont.boldSystemFont(ofSize: image.size.width * 0.06),
-                .foregroundColor: UIColor.black.withAlphaComponent(0.12)
-            ]
-            ctx.cgContext.saveGState()
-            ctx.cgContext.translateBy(x: image.size.width / 2, y: image.size.height / 2)
-            ctx.cgContext.rotate(by: -.pi / 6)
-            let size = text.size(withAttributes: attrs)
-            text.draw(at: CGPoint(x: -size.width / 2, y: -size.height / 2), withAttributes: attrs)
-            ctx.cgContext.restoreGState()
-        }
-    }
-
-    private func exportPNG() {
-        guard let image = renderImage() else { return }
-        let final = watermarked(image)
-        guard let data = final.pngData() else { return }
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent("org-chart-\(Int(Date().timeIntervalSince1970)).png")
-        do {
-            try data.write(to: url)
-            shareItem = ShareItem(url: url)
-        } catch {}
-    }
+    // MARK: - PDF
 
     private func exportPDF() {
-        guard let image = renderImage() else { return }
-        let final = watermarked(image)
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent("org-chart-\(Int(Date().timeIntervalSince1970)).pdf")
-        let pdfRenderer = UIGraphicsPDFRenderer(bounds: CGRect(origin: .zero, size: final.size))
-        do {
-            try pdfRenderer.writePDF(to: url) { ctx in
-                ctx.beginPage()
-                final.draw(at: .zero)
+        switch pdfStyle {
+        case .chart:
+            let count = ChartExporter.personCount(founders: effectiveFounders, root: effectiveRoot)
+            guard count <= ChartExporter.posterSafeLimit else {
+                sizeWarning = isRussian
+                    ? "В структуре \(count) человек — это слишком много даже для многостраничного постера. Ограничьте по уровням или экспортируйте по веткам/отделам."
+                    : "This scope has \(count) people — too many even for a multi-page poster. Limit by levels or export by branch/department instead."
+                return
+            }
+            guard let image = ChartExporter.renderChartImage(app: app, founders: effectiveFounders, root: effectiveRoot, scale: 2) else { return }
+            let final = ChartExporter.watermarked(image, show: app.tier == .free)
+            guard let url = ChartExporter.writePDFChart(image: final, paperSize: paperSize) else {
+                sizeWarning = isRussian
+                    ? "Не удалось собрать постер (слишком много страниц). Выберите больший размер листа или сузьте охват (уровни/ветка)."
+                    : "Couldn't build the poster (too many pages). Choose a larger paper size or narrow the scope (levels/branch)."
+                return
             }
             shareItem = ShareItem(url: url)
-        } catch {}
+        case .list:
+            guard let url = ChartExporter.writePDFList(founders: effectiveFounders, root: effectiveRoot, paperSize: paperSize, isRussian: isRussian) else { return }
+            shareItem = ShareItem(url: url)
+        }
+        app.showToast(Strings.t(.exportStarted, app.lang))
     }
 
     // MARK: - CSV
@@ -172,6 +195,7 @@ struct ExportView: View {
         do {
             try content.write(to: url, atomically: true, encoding: .utf8)
             shareItem = ShareItem(url: url)
+            app.showToast(Strings.t(.exportStarted, app.lang))
         } catch {}
     }
 }
