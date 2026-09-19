@@ -53,13 +53,22 @@ enum ChartExporter {
         founders.count + root.countAll()
     }
 
+    /// Regardless of how the tree is shaped, an image whose actual pixel
+    /// dimensions exceed this is refused rather than handed back — this is
+    /// what used to silently come out as a solid black block once a chart
+    /// got wide/tall enough to exceed the on-device renderer's hardware
+    /// texture limits. Comfortably below the ~16384px baseline all iOS 16+
+    /// devices support, leaving margin for the watermark/PDF compositing
+    /// steps that still run on the result.
+    static let maxSafeImageDimension: CGFloat = 12000
+
     // MARK: - Rendering the chart to a single raster image
 
     @MainActor
     static func renderChartImage(app: AppState, founders: [OrgPerson], root: OrgNode, scale: CGFloat) -> UIImage? {
         let isRussian = app.lang == .ru
         let accent = app.theme.accent
-        let content = VStack(alignment: .leading, spacing: 10) {
+        let content = VStack(spacing: 10) {
             if !founders.isEmpty {
                 HStack(spacing: 10) {
                     ForEach(founders) { founder in
@@ -74,19 +83,19 @@ enum ChartExporter {
                 }
                 Rectangle().fill(accent.opacity(0.3)).frame(width: 2, height: 14)
             }
-            // Horizontal (left-to-right) layout, used ONLY for export
-            // rendering — turns the chart's natural wide-and-short shape into
-            // a tall-and-narrow one that fits portrait paper far better and
-            // reads top-to-bottom like a scroll. The on-screen tree stays
-            // vertical (see OrgChartView / NodeBranchView).
-            HorizontalNodeBranchView(node: root, accent: accent, isRussian: isRussian)
+            ChartExportBranchView(node: root, accent: accent, isRussian: isRussian)
         }
         .padding(30)
         .background(Color.white)
         .environmentObject(app)
         let renderer = ImageRenderer(content: content)
         renderer.scale = scale
-        return renderer.uiImage
+        guard let image = renderer.uiImage else { return nil }
+        guard image.size.width * image.scale <= maxSafeImageDimension,
+              image.size.height * image.scale <= maxSafeImageDimension else {
+            return nil
+        }
+        return image
     }
 
     static func watermarked(_ image: UIImage, show: Bool) -> UIImage {
