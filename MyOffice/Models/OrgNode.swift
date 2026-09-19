@@ -116,4 +116,12 @@ extension OrgNode {
     func maxDepth() -> Int {
         1 + (children.map { $0.maxDepth() }.max() ?? 0)
     }
+
+    /// How many people exist below this node (the combined size of all its
+    /// children's subtrees) — i.e. how many are hidden if this node's
+    /// children are collapsed. Used by the on-screen tree's "▸ N" expand
+    /// affordance so a collapsed branch still shows how big it is.
+    func descendantCount() -> Int {
+        children.reduce(0) { $0 + $1.countAll() }
+    }
 }
