@@ -96,4 +96,24 @@ extension OrgNode {
         }
         return nil
     }
+
+    /// Returns a copy with children dropped beyond `maxDepth` levels counted
+    /// from this node itself (maxDepth == 1 keeps only this node, with no
+    /// children at all). Used to export "just the leadership" — this node
+    /// plus a fixed number of report levels — without the full staff below.
+    func truncated(toDepth maxDepth: Int) -> OrgNode {
+        var copy = self
+        if maxDepth <= 1 {
+            copy.children = []
+        } else {
+            copy.children = children.map { $0.truncated(toDepth: maxDepth - 1) }
+        }
+        return copy
+    }
+
+    /// How many levels deep this (sub)tree actually goes (1 == just this
+    /// node, no children). Used to size the depth-limit stepper in Export.
+    func maxDepth() -> Int {
+        1 + (children.map { $0.maxDepth() }.max() ?? 0)
+    }
 }
