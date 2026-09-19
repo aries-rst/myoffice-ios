@@ -5,12 +5,19 @@ struct LimitPaywallSheet: View {
     @Environment(\.dismiss) var dismiss
     let context: UpsellContext
 
+    private var isCSVContext: Bool {
+        if case .csvFeature = context { return true }
+        return false
+    }
+
     var titleKey: L {
         switch context {
         case .limit:
             return app.tier == .free ? .limitTitleFree : .limitTitlePro
         case .theme:
             return .themeUpsellTitle
+        case .csvFeature:
+            return .csvUpsellTitle
         }
     }
 
@@ -20,6 +27,8 @@ struct LimitPaywallSheet: View {
             return app.tier == .free ? .limitTextFree : .limitTextPro
         case .theme:
             return .themeUpsellText
+        case .csvFeature:
+            return .csvUpsellText
         }
     }
 
@@ -41,7 +50,7 @@ struct LimitPaywallSheet: View {
             .padding(.horizontal, 24)
 
             VStack(spacing: 12) {
-                if app.tier == .free {
+                if app.tier == .free, isCSVContext == false {
                     Button {
                         app.selectTier(.pro)
                         dismiss()
