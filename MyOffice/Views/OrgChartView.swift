@@ -18,27 +18,14 @@ struct OrgChartView: View {
         GeometryReader { outer in
             ZStack {
                 VStack(spacing: 10) {
-                    if !app.hasFounderTier, let topName = app.root.people.first?.name, !topName.isEmpty {
-                        Button {
-                            editContext = .addSuperior
-                        } label: {
-                            Text((isRussian ? "+ Добавить учредителей \"" : "+ Add founders of \"") + topName + "\"")
-                                .font(.system(size: 12, weight: .bold))
-                                .fixedSize()
-                                .padding(.horizontal, 12).padding(.vertical, 6)
-                                .background(app.theme.accent)
-                                .foregroundStyle(.white)
-                                .clipShape(Capsule())
-                        }
-                    }
+                    foundersRow
                     NodeBranchView(
                         node: app.root,
                         onTap: { n in n.isVacant ? (editContext = .fillVacancy(nodeId: n.id)) : (detailNode = n) },
                         onMenu: { n in menuNode = n },
                         onAddReport: { n in editContext = n.isVacant ? .fillVacancy(nodeId: n.id) : .addReport(parentId: n.id) },
                         accent: app.theme.accent,
-                        isRussian: isRussian,
-                        suppressAddReport: app.hasFounderTier
+                        isRussian: isRussian
                     )
                 }
                 .padding(40)
@@ -75,11 +62,11 @@ struct OrgChartView: View {
             }
         }
         .clipped()
-        .background(app.theme.accent.opacity(0.06))
+        .background(WallpaperBackgroundView())
         .onChange(of: app.root.id) { _ in
-            // The root identity only changes on a full data reset or when a founders
-            // tier is added above the old root — recenter so the (possibly tiny, now
-            // empty) chart isn't left scrolled/zoomed out of view from before.
+            // The root identity only changes on a full data reset — recenter so
+            // the (possibly tiny, now empty) chart isn't left scrolled/zoomed
+            // out of view from before.
             scale = 1.0; lastScale = 1.0
             offset = .zero; lastOffset = .zero
         }
@@ -126,6 +113,59 @@ struct OrgChartView: View {
             PersonEditSheet(context: context)
         }
     }
+
+    /// Up to 4 independent founder cells shown above the CEO card — each its
+    /// own cell (no "couple" pairing), only shown once the CEO position itself
+    /// is named, and only if at least one founder exists or can still be added.
+    @ViewBuilder
+    private var foundersRow: some View {
+        if let ceoName = app.root.people.first?.name, !ceoName.isEmpty {
+            VStack(spacing: 6) {
+                HStack(spacing: 8) {
+                    ForEach(app.founders) { founder in
+                        founderCell(founder)
+                    }
+                    if app.founders.count < 4 {
+                        Button {
+                            editContext = .addFounder
+                        } label: {
+                            Text(app.founders.isEmpty
+                                 ? (isRussian ? "+ Учредители \"\(ceoName)\"" : "+ Founders of \"\(ceoName)\"")
+                                 : (isRussian ? "+ Учредитель" : "+ Founder"))
+                                .font(.system(size: 11, weight: .bold))
+                                .fixedSize()
+                                .pillButton(app.theme.accent)
+                        }
+                    }
+                }
+                if !app.founders.isEmpty {
+                    Rectangle().fill(app.theme.accent.opacity(0.3)).frame(width: 2, height: 14)
+                }
+            }
+        }
+    }
+
+    private func founderCell(_ founder: OrgPerson) -> some View {
+        VStack(spacing: 4) {
+            AvatarView(photoData: founder.photoData, diameter: 34)
+            Text(founder.name)
+                .font(.system(size: 12, weight: .semibold))
+                .fixedSize()
+        }
+        .padding(8)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .shadow(color: .black.opacity(0.08), radius: 3, y: 1)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            editContext = .editFounder(
+                personId: founder.id, currentName: founder.name,
+                currentPhone: founder.phone, currentEmail: founder.email,
+                currentTelegram: founder.telegram, currentWhatsapp: founder.whatsapp,
+                currentPhotoData: founder.photoData
+            )
+        }
+    }
 }
 
 struct NodeBranchView: View {
@@ -136,7 +176,6 @@ struct NodeBranchView: View {
     let accent: Color
     let isRussian: Bool
     var showControls: Bool = true
-    var suppressAddReport: Bool = false
 
     var body: some View {
         VStack(spacing: 8) {
@@ -144,16 +183,11 @@ struct NodeBranchView: View {
 
             if showControls, !node.isVacant {
                 HStack(spacing: 10) {
-                    if !suppressAddReport {
-                        Button { onAddReport(node) } label: {
-                            Text(isRussian ? "+ подчинённый" : "+ report")
-                                .font(.system(size: 11, weight: .bold))
-                                .fixedSize()
-                                .padding(.horizontal, 10).padding(.vertical, 5)
-                                .background(accent)
-                                .foregroundStyle(.white)
-                                .clipShape(Capsule())
-                        }
+                    Button { onAddReport(node) } label: {
+                        Text(isRussian ? "+ подчинённый" : "+ report")
+                            .font(.system(size: 11, weight: .bold))
+                            .fixedSize()
+                            .pillButton(accent)
                     }
                     Button { onMenu(node) } label: {
                         Image(systemName: "ellipsis.circle.fill")
