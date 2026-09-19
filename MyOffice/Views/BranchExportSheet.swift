@@ -120,7 +120,12 @@ struct BranchExportSheet: View {
                     : "This branch has \(count) people — too many for a single PNG (limit ~\(ChartExporter.pngSafeLimit)). Use PDF or limit by levels."
                 return
             }
-            guard let image = ChartExporter.renderChartImage(app: app, founders: [], root: effectiveRoot, scale: 3) else { return }
+            guard let image = ChartExporter.renderChartImage(app: app, founders: [], root: effectiveRoot, scale: 3) else {
+                sizeWarning = isRussian
+                    ? "Не удалось построить изображение — ветка слишком сложная/разветвлённая для рендеринга. Ограничьте по уровням."
+                    : "Couldn't render the image — this branch is too complex to draw. Limit by levels."
+                return
+            }
             let final = ChartExporter.watermarked(image, show: app.tier == .free)
             guard let url = ChartExporter.writePNG(final, filenamePrefix: "branch") else { return }
             shareItem = ShareItem(url: url)
@@ -134,7 +139,12 @@ struct BranchExportSheet: View {
                         : "This branch has \(count) people — too many even for a chart PDF. Limit by levels."
                     return
                 }
-                guard let image = ChartExporter.renderChartImage(app: app, founders: [], root: effectiveRoot, scale: 2) else { return }
+                guard let image = ChartExporter.renderChartImage(app: app, founders: [], root: effectiveRoot, scale: 2) else {
+                    sizeWarning = isRussian
+                        ? "Не удалось построить схему — ветка слишком сложная/разветвлённая для рендеринга. Ограничьте по уровням."
+                        : "Couldn't render the chart — this branch is too complex to draw. Limit by levels."
+                    return
+                }
                 let final = ChartExporter.watermarked(image, show: app.tier == .free)
                 let candidateURL = posterMode
                     ? ChartExporter.writePDFChartPoster(image: final, paperSize: paperSize)
