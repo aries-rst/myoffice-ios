@@ -63,6 +63,13 @@ struct CSVImportSheet: View {
                 .multilineTextAlignment(.center)
 
             Text(isRussian
+                 ? "Такую таблицу удобно сначала набрать в Excel/Google Таблицах с этими же названиями колонок, а потом сохранить/экспортировать файл именно как CSV (UTF-8) — и выбрать его здесь."
+                 : "It's easiest to first build this table in Excel/Google Sheets using these exact column names, then save/export the file specifically as CSV (UTF-8) — and choose that file here.")
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+
+            Text(isRussian
                  ? "Важно: не меняйте порядок строк в файле — по нему восстанавливается иерархия должностей."
                  : "Important: keep the rows in their exported order — that order is what the hierarchy is rebuilt from.")
                 .font(.system(size: 12, weight: .semibold))
