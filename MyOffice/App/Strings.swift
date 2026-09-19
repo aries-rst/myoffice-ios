@@ -24,6 +24,10 @@ enum L: String {
     case addedReport, addedComanager, vacated, hired
     case newHireName, newHireTitle, newComanagerName
     case exportStarted, closeDetail
+    case csvGroup, csvMaxOnlyNote, csvExportBtn, csvImportBtn
+    case csvUpsellTitle, csvUpsellText
+    case csvImportSheetTitle, csvChooseFile, csvPreviewTitle, csvReplaceConfirm, csvCancel
+    case csvReadError
 }
 
 enum Strings {
@@ -52,6 +56,12 @@ enum Strings {
         .hired: "Вакансия занята — сотрудник добавлен",
         .newHireName: "Новый сотрудник", .newHireTitle: "Новая должность", .newComanagerName: "Новый со-руководитель",
         .exportStarted: "Экспорт запущен (демо)", .closeDetail: "Закрыть",
+        .csvGroup: "Обмен данными (CSV)", .csvMaxOnlyNote: "Доступно на тарифе MAX",
+        .csvExportBtn: "Экспортировать в CSV", .csvImportBtn: "Импортировать из CSV",
+        .csvUpsellTitle: "CSV доступен на MAX", .csvUpsellText: "Импорт и экспорт всей структуры через CSV — функция тарифа MAX.",
+        .csvImportSheetTitle: "Импорт из CSV", .csvChooseFile: "Выбрать CSV-файл",
+        .csvPreviewTitle: "Предпросмотр импорта", .csvReplaceConfirm: "Заменить текущие данные",
+        .csvCancel: "Отмена", .csvReadError: "Не удалось прочитать файл",
     ]
 
     private static let en: [L: String] = [
@@ -79,6 +89,12 @@ enum Strings {
         .hired: "Vacancy filled — employee added",
         .newHireName: "New hire", .newHireTitle: "New position", .newComanagerName: "New co-manager",
         .exportStarted: "Export started (demo)", .closeDetail: "Close",
+        .csvGroup: "Data exchange (CSV)", .csvMaxOnlyNote: "Available on the MAX plan",
+        .csvExportBtn: "Export to CSV", .csvImportBtn: "Import from CSV",
+        .csvUpsellTitle: "CSV is a MAX feature", .csvUpsellText: "Importing and exporting the whole chart via CSV unlocks on the MAX plan.",
+        .csvImportSheetTitle: "Import from CSV", .csvChooseFile: "Choose CSV file",
+        .csvPreviewTitle: "Import preview", .csvReplaceConfirm: "Replace current data",
+        .csvCancel: "Cancel", .csvReadError: "Couldn't read the file",
     ]
 
     static func t(_ key: L, _ lang: Lang) -> String {
