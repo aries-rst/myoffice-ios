@@ -1,8 +1,11 @@
 import SwiftUI
+import PhotosUI
+import UIKit
 
 struct SettingsView: View {
     @EnvironmentObject var app: AppState
     @State private var showResetConfirm = false
+    @State private var wallpaperPhotoItem: PhotosPickerItem?
 
     private var isRussian: Bool { app.lang == .ru }
 
@@ -45,6 +48,57 @@ struct SettingsView: View {
                 }
             }
 
+            Section {
+                ForEach(WallpaperPreset.allCases) { preset in
+                    Button {
+                        app.customWallpaperData = nil
+                        app.wallpaper = preset
+                    } label: {
+                        HStack {
+                            Text(preset.label(app.lang))
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            if app.customWallpaperData == nil && app.wallpaper == preset {
+                                Image(systemName: "checkmark")
+                                    .foregroundStyle(app.theme.accent)
+                            }
+                        }
+                    }
+                }
+                PhotosPicker(selection: $wallpaperPhotoItem, matching: .images) {
+                    HStack {
+                        Image(systemName: "photo.on.rectangle.angled")
+                        Text(isRussian ? "Свой фон из галереи" : "Custom photo from library")
+                        Spacer()
+                        if app.customWallpaperData != nil {
+                            Image(systemName: "checkmark")
+                                .foregroundStyle(app.theme.accent)
+                        }
+                    }
+                }
+                .onChange(of: wallpaperPhotoItem) { newItem in
+                    Task {
+                        if let data = try? await newItem?.loadTransferable(type: Data.self),
+                           let uiImage = UIImage(data: data) {
+                            app.customWallpaperData = uiImage.resized(maxDimension: 1000).jpegData(compressionQuality: 0.6)
+                        }
+                    }
+                }
+                if app.customWallpaperData != nil {
+                    Button(role: .destructive) {
+                        app.customWallpaperData = nil
+                    } label: {
+                        Text(isRussian ? "Убрать свой фон" : "Remove custom photo")
+                    }
+                }
+            } header: {
+                Text(isRussian ? "Обои" : "Wallpaper")
+            } footer: {
+                Text(isRussian
+                     ? "Обои не зависят от цветовой темы — можно сочетать любые."
+                     : "Wallpaper is independent of the color theme — mix and match freely.")
+            }
+
             Section(Strings.t(.langGroup, app.lang)) {
                 Picker(Strings.t(.langLabel, app.lang), selection: $app.lang) {
                     Text("Русский").tag(Lang.ru)
@@ -66,6 +120,8 @@ struct SettingsView: View {
                      : "Removes the whole org chart and employees. Your purchase and theme stay.")
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(WallpaperBackgroundView())
         .navigationTitle(Strings.t(.settingsTitle, app.lang))
         .alert(isRussian ? "Очистить все данные?" : "Clear all data?", isPresented: $showResetConfirm) {
             Button(isRussian ? "Отмена" : "Cancel", role: .cancel) {}
