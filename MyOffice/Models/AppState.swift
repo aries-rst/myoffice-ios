@@ -22,8 +22,13 @@ final class AppState: ObservableObject {
     @Published var lang: Lang = .en { didSet { save() } }
     @Published var tier: Tier = .free { didSet { save() } }
     @Published var theme: WorkspaceTheme = .office { didSet { save() } }
+    @Published var wallpaper: WallpaperPreset = .none { didSet { save() } }
+    @Published var customWallpaperData: Data? = nil { didSet { save() } }
     @Published var root: OrgNode = OrgNode(people: [], title: "CEO", deptColor: .ceo) { didSet { save() } }
-    @Published var hasFounderTier: Bool = false { didSet { save() } }
+    // Up to 4 independent founders shown above the CEO card, each their own
+    // cell (not a couple/pair) — see addFounder(). Empty means the row isn't
+    // shown at all.
+    @Published var founders: [OrgPerson] = [] { didSet { save() } }
 
     @Published var upsellContext: UpsellContext? = nil
     @Published var toastMessage: String? = nil
@@ -31,8 +36,11 @@ final class AppState: ObservableObject {
     private let rootKey = "myoffice.root"
     private let tierKey = "myoffice.tier"
     private let langKey = "myoffice.lang"
-    private let hasFounderTierKey = "myoffice.hasFounderTier"
     private let themeKey = "myoffice.theme"
+    private let wallpaperKey = "myoffice.wallpaper"
+    private let customWallpaperKey = "myoffice.customWallpaper"
+    private let foundersKey = "myoffice.founders"
+    private let legacyHasFounderTierKey = "myoffice.hasFounderTier"
 
     init() {
         load()
@@ -42,10 +50,18 @@ final class AppState: ObservableObject {
         if let data = try? JSONEncoder().encode(root) {
             UserDefaults.standard.set(data, forKey: rootKey)
         }
+        if let data = try? JSONEncoder().encode(founders) {
+            UserDefaults.standard.set(data, forKey: foundersKey)
+        }
         UserDefaults.standard.set(tier.rawValue, forKey: tierKey)
         UserDefaults.standard.set(lang == .ru ? "ru" : "en", forKey: langKey)
-        UserDefaults.standard.set(hasFounderTier, forKey: hasFounderTierKey)
         UserDefaults.standard.set(theme.rawValue, forKey: themeKey)
+        UserDefaults.standard.set(wallpaper.rawValue, forKey: wallpaperKey)
+        if let customWallpaperData {
+            UserDefaults.standard.set(customWallpaperData, forKey: customWallpaperKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: customWallpaperKey)
+        }
     }
 
     private func load() {
@@ -60,20 +76,39 @@ final class AppState: ObservableObject {
         if let langRaw = UserDefaults.standard.string(forKey: langKey) {
             lang = langRaw == "ru" ? .ru : .en
         }
-        hasFounderTier = UserDefaults.standard.bool(forKey: hasFounderTierKey)
         if let themeRaw = UserDefaults.standard.string(forKey: themeKey),
            let decodedTheme = WorkspaceTheme(rawValue: themeRaw) {
             theme = decodedTheme
+        }
+        if let wallpaperRaw = UserDefaults.standard.string(forKey: wallpaperKey),
+           let decodedWallpaper = WallpaperPreset(rawValue: wallpaperRaw) {
+            wallpaper = decodedWallpaper
+        }
+        customWallpaperData = UserDefaults.standard.data(forKey: customWallpaperKey)
+
+        if let data = UserDefaults.standard.data(forKey: foundersKey),
+           let decodedFounders = try? JSONDecoder().decode([OrgPerson].self, from: data) {
+            founders = decodedFounders
+        } else if UserDefaults.standard.bool(forKey: legacyHasFounderTierKey) {
+            // One-time migration from the old design, where "founders" were
+            // stored as the top node's own people (up to 2), with the real
+            // CEO one level below as its only child.
+            founders = Array(root.people.prefix(4))
+            if let ceo = root.children.first {
+                root = ceo
+            }
+            UserDefaults.standard.removeObject(forKey: legacyHasFounderTierKey)
+            save()
         }
     }
 
     func resetAllData() {
         root = OrgNode(people: [], title: "CEO", deptColor: .ceo)
-        hasFounderTier = false
+        founders = []
         showToast(lang == .ru ? "Данные очищены" : "Data cleared")
     }
 
-    var employeeCount: Int { root.countAll() }
+    var employeeCount: Int { root.countAll() + founders.count }
 
     var canAddPerson: Bool {
         guard let limit = tier.limit else { return true }
@@ -164,27 +199,40 @@ final class AppState: ObservableObject {
         showToast(lang == .ru ? "Сохранено" : "Saved")
     }
 
-    func addSuperior(name: String, title: String, phone: String, email: String, telegram: String, whatsapp: String, photoData: Data?) {
-        guard !hasFounderTier else { return }
+    /// Adds one independent founder cell above the CEO (up to 4 total). Unlike
+    /// a co-manager pair, founders are never paired up as a "couple" — each is
+    /// its own cell with just a name, photo, and optional contacts.
+    func addFounder(name: String, phone: String, email: String, telegram: String, whatsapp: String, photoData: Data?) {
+        guard founders.count < 4 else { return }
         guard canAddPerson else {
             upsellContext = .limit
             return
         }
-        root = OrgNode(
-            people: [OrgPerson(
-                name: name,
-                phone: phone.isEmpty ? nil : phone,
-                email: email.isEmpty ? nil : email,
-                telegram: telegram.isEmpty ? nil : telegram,
-                whatsapp: whatsapp.isEmpty ? nil : whatsapp,
-                photoData: photoData
-            )],
-            title: title,
-            deptColor: .ceo,
-            children: [root]
-        )
-        hasFounderTier = true
-        showToast(lang == .ru ? "Добавлено" : "Added")
+        founders.append(OrgPerson(
+            name: name,
+            phone: phone.isEmpty ? nil : phone,
+            email: email.isEmpty ? nil : email,
+            telegram: telegram.isEmpty ? nil : telegram,
+            whatsapp: whatsapp.isEmpty ? nil : whatsapp,
+            photoData: photoData
+        ))
+        showToast(lang == .ru ? "Учредитель добавлен" : "Founder added")
+    }
+
+    func updateFounder(id: String, name: String, phone: String, email: String, telegram: String, whatsapp: String, photoData: Data?) {
+        guard let idx = founders.firstIndex(where: { $0.id == id }) else { return }
+        founders[idx].name = name
+        founders[idx].phone = phone.isEmpty ? nil : phone
+        founders[idx].email = email.isEmpty ? nil : email
+        founders[idx].telegram = telegram.isEmpty ? nil : telegram
+        founders[idx].whatsapp = whatsapp.isEmpty ? nil : whatsapp
+        founders[idx].photoData = photoData
+        showToast(lang == .ru ? "Сохранено" : "Saved")
+    }
+
+    func removeFounder(id: String) {
+        founders.removeAll { $0.id == id }
+        showToast(lang == .ru ? "Удалено" : "Removed")
     }
 
     func selectTheme(_ newTheme: WorkspaceTheme) {
