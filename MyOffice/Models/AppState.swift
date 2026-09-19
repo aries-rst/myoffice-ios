@@ -15,6 +15,7 @@ enum Tier: String, CaseIterable, Codable {
 enum UpsellContext {
     case limit
     case theme(WorkspaceTheme)
+    case csvFeature
 }
 
 @MainActor
@@ -113,6 +114,22 @@ final class AppState: ObservableObject {
     var canAddPerson: Bool {
         guard let limit = tier.limit else { return true }
         return employeeCount < limit
+    }
+
+    /// CSV export/import (the structured, reimportable format) is a MAX-only
+    /// feature — it's the one way to move a whole large org chart in and out
+    /// of the app in one go, which is precisely what MAX (unlimited
+    /// employees) is for.
+    var canUseCSVTransfer: Bool { tier == .max }
+
+    /// Wholesale replace of the org chart and founders, used by CSV import —
+    /// unlike every other mutator here, this intentionally does NOT go
+    /// through canAddPerson/upsellContext, since the user already confirmed
+    /// the replacement in the import preview step.
+    func replaceAllData(founders newFounders: [OrgPerson], root newRoot: OrgNode) {
+        founders = newFounders
+        root = newRoot
+        showToast(lang == .ru ? "Данные импортированы" : "Data imported")
     }
 
     func showToast(_ text: String) {
