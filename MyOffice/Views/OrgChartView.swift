@@ -8,6 +8,7 @@ struct OrgChartView: View {
     @State private var lastOffset: CGSize = .zero
     @State private var menuNode: OrgNode? = nil
     @State private var detailNode: OrgNode? = nil
+    @State private var detailFounder: OrgPerson? = nil
     @State private var editContext: PersonEditContext? = nil
 
     private var isRussian: Bool { app.lang == .ru }
@@ -109,6 +110,9 @@ struct OrgChartView: View {
         .sheet(item: $detailNode) { node in
             EmployeeDetailSheet(node: node)
         }
+        .sheet(item: $detailFounder) { founder in
+            FounderDetailSheet(founder: founder)
+        }
         .sheet(item: $editContext) { context in
             PersonEditSheet(context: context)
         }
@@ -158,12 +162,7 @@ struct OrgChartView: View {
         .shadow(color: .black.opacity(0.08), radius: 3, y: 1)
         .contentShape(Rectangle())
         .onTapGesture {
-            editContext = .editFounder(
-                personId: founder.id, currentName: founder.name,
-                currentPhone: founder.phone, currentEmail: founder.email,
-                currentTelegram: founder.telegram, currentWhatsapp: founder.whatsapp,
-                currentPhotoData: founder.photoData
-            )
+            detailFounder = founder
         }
     }
 }
