@@ -28,16 +28,22 @@ struct PeopleListView: View {
             Button {
                 detailNode = node
             } label: {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(node.people.map { $0.name }.joined(separator: " / "))
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(.primary)
-                    Text(node.title)
-                        .font(.system(size: 13))
-                        .foregroundStyle(.secondary)
+                HStack(spacing: 12) {
+                    AvatarView(photoData: node.people.first?.photoData, diameter: 36)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(node.people.map { $0.name }.joined(separator: " / "))
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(.primary)
+                        Text(node.title)
+                            .font(.system(size: 13))
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
+            .listRowBackground(Color.clear)
         }
+        .scrollContentBackground(.hidden)
+        .background(WallpaperBackgroundView())
         .searchable(text: $query, prompt: Strings.t(.search, app.lang))
         .navigationTitle(Strings.t(.peopleTitle, app.lang))
         .sheet(item: $detailNode) { node in
