@@ -22,7 +22,24 @@ struct ExportView: View {
             }
 
             Section {
-                if app.tier == .free {
+                if format == "CSV" {
+                    if app.canUseCSVTransfer {
+                        Label(isRussian
+                              ? "Этот файл можно потом импортировать обратно в Настройках."
+                              : "This file can later be imported back in Settings.",
+                              systemImage: "arrow.triangle.2.circlepath")
+                            .font(.system(size: 13))
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Label(Strings.t(.csvMaxOnlyNote, app.lang), systemImage: "lock.fill")
+                            .font(.system(size: 13))
+                            .foregroundStyle(.secondary)
+                        Button(Strings.t(.csvUpsellTitle, app.lang)) {
+                            app.upsellContext = .csvFeature
+                        }
+                        .font(.system(size: 13, weight: .semibold))
+                    }
+                } else if app.tier == .free {
                     Label(Strings.t(.watermarkNote, app.lang), systemImage: "seal")
                         .font(.system(size: 13))
                         .foregroundStyle(.secondary)
@@ -60,7 +77,12 @@ struct ExportView: View {
         switch format {
         case "PDF": exportPDF()
         case "PNG": exportPNG()
-        default: exportCSV()
+        default:
+            guard app.canUseCSVTransfer else {
+                app.upsellContext = .csvFeature
+                return
+            }
+            exportCSV()
         }
         app.showToast(Strings.t(.exportStarted, app.lang))
     }
@@ -144,31 +166,8 @@ struct ExportView: View {
 
     // MARK: - CSV
 
-    private func csvRows(from node: OrgNode, depth: Int = 0) -> [String] {
-        var rows: [String] = []
-        if depth > 0 || !node.people.isEmpty {
-            let indent = String(repeating: "  ", count: depth)
-            let names = node.people.map { $0.name }.joined(separator: " & ")
-            let phones = node.people.compactMap { $0.phone }.joined(separator: " & ")
-            let emails = node.people.compactMap { $0.email }.joined(separator: " & ")
-            let telegrams = node.people.compactMap { $0.telegram }.joined(separator: " & ")
-            let whatsapps = node.people.compactMap { $0.whatsapp }.joined(separator: " & ")
-            rows.append("\"\(indent)\(names)\",\"\(node.title)\",\"\(phones)\",\"\(emails)\",\"\(telegrams)\",\"\(whatsapps)\"")
-        }
-        for child in node.children {
-            rows.append(contentsOf: csvRows(from: child, depth: depth + 1))
-        }
-        return rows
-    }
-
     private func exportCSV() {
-        let header = "Name,Title,Phone,Email,Telegram,WhatsApp"
-        var lines = [header]
-        for founder in app.founders {
-            lines.append("\"\(founder.name)\",\"\(isRussian ? "Учредитель" : "Founder")\",\"\(founder.phone ?? "")\",\"\(founder.email ?? "")\",\"\(founder.telegram ?? "")\",\"\(founder.whatsapp ?? "")\"")
-        }
-        lines.append(contentsOf: csvRows(from: app.root))
-        let content = lines.joined(separator: "\n")
+        let content = CSVTransfer.exportText(founders: app.founders, root: app.root)
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("org-chart-\(Int(Date().timeIntervalSince1970)).csv")
         do {
             try content.write(to: url, atomically: true, encoding: .utf8)
