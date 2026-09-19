@@ -30,10 +30,13 @@ struct NodeCardView: View {
                             .foregroundStyle(.secondary)
                     }
                 } else {
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: 4) {
                         ForEach(node.people) { person in
-                            Text(person.name)
-                                .font(.system(size: 14, weight: .semibold))
+                            HStack(spacing: 6) {
+                                AvatarView(photoData: person.photoData, diameter: 22)
+                                Text(person.name)
+                                    .font(.system(size: 14, weight: .semibold))
+                            }
                         }
                     }
                 }
@@ -51,10 +54,7 @@ struct NodeCardView: View {
                     Button(action: onTap) {
                         Label(isRussian ? "Заполнить должность" : "Fill position", systemImage: "plus.circle.fill")
                             .font(.system(size: 12, weight: .bold))
-                            .padding(.horizontal, 10).padding(.vertical, 6)
-                            .background(accentColor)
-                            .foregroundStyle(.white)
-                            .clipShape(Capsule())
+                            .pillButton(accentColor)
                     }
                     .buttonStyle(.plain)
                 }
