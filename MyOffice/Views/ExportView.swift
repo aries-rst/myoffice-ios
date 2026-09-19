@@ -6,6 +6,7 @@ struct ExportView: View {
     @State private var format: String = "PDF"
     @State private var pdfStyle: PDFStyle = .chart
     @State private var paperSize: PaperSize = .a4
+    @State private var posterMode = false
     @State private var includeFounders = true
     @State private var limitDepth = false
     @State private var depthValue = 3
@@ -61,9 +62,14 @@ struct ExportView: View {
                     .pickerStyle(.segmented)
 
                     if pdfStyle == .chart {
-                        Text(isRussian
-                             ? "Большая схема автоматически разбивается на несколько листов выбранного размера — распечатайте и склейте в один плакат."
-                             : "A large chart is automatically split across several sheets of the chosen size — print and join them into one poster.")
+                        Toggle(Strings.t(.posterModeToggle, app.lang), isOn: $posterMode)
+                        Text(posterMode
+                             ? (isRussian
+                                ? "Схема печатается в реальном размере на нескольких листах — распечатайте и склейте в один плакат."
+                                : "The chart prints at full size across several sheets — print and join them into one poster.")
+                             : (isRussian
+                                ? "Схема автоматически уменьшается, чтобы поместиться на одном листе выбранного размера."
+                                : "The chart automatically scales down to fit on a single sheet of the chosen size."))
                             .font(.system(size: 12))
                             .foregroundStyle(.secondary)
                     }
@@ -167,16 +173,19 @@ struct ExportView: View {
             let count = ChartExporter.personCount(founders: effectiveFounders, root: effectiveRoot)
             guard count <= ChartExporter.posterSafeLimit else {
                 sizeWarning = isRussian
-                    ? "В структуре \(count) человек — это слишком много даже для многостраничного постера. Ограничьте по уровням или экспортируйте по веткам/отделам."
-                    : "This scope has \(count) people — too many even for a multi-page poster. Limit by levels or export by branch/department instead."
+                    ? "В структуре \(count) человек — это слишком много даже для PDF-схемы. Ограничьте по уровням или экспортируйте по веткам/отделам."
+                    : "This scope has \(count) people — too many even for a chart PDF. Limit by levels or export by branch/department instead."
                 return
             }
             guard let image = ChartExporter.renderChartImage(app: app, founders: effectiveFounders, root: effectiveRoot, scale: 2) else { return }
             let final = ChartExporter.watermarked(image, show: app.tier == .free)
-            guard let url = ChartExporter.writePDFChart(image: final, paperSize: paperSize) else {
+            let candidateURL = posterMode
+                ? ChartExporter.writePDFChartPoster(image: final, paperSize: paperSize)
+                : ChartExporter.writePDFChartFitted(image: final, paperSize: paperSize)
+            guard let url = candidateURL else {
                 sizeWarning = isRussian
-                    ? "Не удалось собрать постер (слишком много страниц). Выберите больший размер листа или сузьте охват (уровни/ветка)."
-                    : "Couldn't build the poster (too many pages). Choose a larger paper size or narrow the scope (levels/branch)."
+                    ? "Не удалось собрать постер (слишком много страниц). Выберите больший размер листа, отключите режим «Плакат» или сузьте охват (уровни/ветка)."
+                    : "Couldn't build the poster (too many pages). Choose a larger paper size, turn off Poster mode, or narrow the scope (levels/branch)."
                 return
             }
             shareItem = ShareItem(url: url)
