@@ -10,6 +10,7 @@ struct OrgChartView: View {
     @State private var detailNode: OrgNode? = nil
     @State private var detailFounder: OrgPerson? = nil
     @State private var editContext: PersonEditContext? = nil
+    @State private var branchExportNode: OrgNode? = nil
 
     private var isRussian: Bool { app.lang == .ru }
     private let minScale: CGFloat = 0.4
@@ -31,6 +32,12 @@ struct OrgChartView: View {
                 }
                 .padding(40)
                 .fixedSize()
+                // Flattens the (potentially hundreds-of-cards) content into a
+                // single rendered layer before scale/offset are applied, so
+                // pinch/pan/+- transform one texture instead of recomputing
+                // layout for every card on each gesture update — needed once
+                // a chart grows into the hundreds of people.
+                .drawingGroup()
                 .scaleEffect(scale)
                 .offset(offset)
             }
@@ -94,6 +101,9 @@ struct OrgChartView: View {
             titleVisibility: .visible
         ) {
             if let node = menuNode {
+                Button(Strings.t(.branchExportAction, app.lang)) {
+                    branchExportNode = node
+                }
                 if !node.isVacant {
                     if !node.isComanaged {
                         Button(Strings.t(.menuAddComanager, app.lang)) {
@@ -115,6 +125,9 @@ struct OrgChartView: View {
         }
         .sheet(item: $editContext) { context in
             PersonEditSheet(context: context)
+        }
+        .sheet(item: $branchExportNode) { node in
+            BranchExportSheet(node: node)
         }
     }
 
