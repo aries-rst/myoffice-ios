@@ -5,7 +5,8 @@ enum PersonEditContext: Identifiable {
     case addReport(parentId: UUID)
     case addComanager(nodeId: UUID)
     case fillVacancy(nodeId: UUID)
-    case addSuperior
+    case addFounder
+    case editFounder(personId: String, currentName: String, currentPhone: String?, currentEmail: String?, currentTelegram: String?, currentWhatsapp: String?, currentPhotoData: Data?)
     case editPerson(nodeId: UUID, personId: String, currentName: String, currentTitle: String, showTitleField: Bool, currentPhone: String?, currentEmail: String?, currentTelegram: String?, currentWhatsapp: String?, currentPhotoData: Data?)
 
     var id: String {
@@ -13,7 +14,8 @@ enum PersonEditContext: Identifiable {
         case .addReport(let id): return "addReport-\(id)"
         case .addComanager(let id): return "addComanager-\(id)"
         case .fillVacancy(let id): return "fillVacancy-\(id)"
-        case .addSuperior: return "addSuperior"
+        case .addFounder: return "addFounder"
+        case .editFounder(let personId, _, _, _, _, _, _): return "editFounder-\(personId)"
         case .editPerson(let id, let personId, _, _, _, _, _, _, _, _): return "editPerson-\(id)-\(personId)"
         }
     }
@@ -37,15 +39,15 @@ struct PersonEditSheet: View {
 
     private var needsTitleField: Bool {
         switch context {
-        case .addReport, .addSuperior: return true
-        case .addComanager, .fillVacancy: return false
+        case .addReport: return true
+        case .addComanager, .fillVacancy, .addFounder, .editFounder: return false
         case .editPerson(_, _, _, _, let showTitle, _, _, _, _, _): return showTitle
         }
     }
 
     private var needsContactFields: Bool {
         switch context {
-        case .addReport, .fillVacancy, .addSuperior, .editPerson: return true
+        case .addReport, .fillVacancy, .addFounder, .editFounder, .editPerson: return true
         case .addComanager: return false
         }
     }
@@ -55,7 +57,8 @@ struct PersonEditSheet: View {
         case .addReport: return isRussian ? "Новая должность" : "New position"
         case .addComanager: return isRussian ? "Добавить со-руководителя" : "Add co-manager"
         case .fillVacancy: return isRussian ? "Назначить сотрудника" : "Assign employee"
-        case .addSuperior: return isRussian ? "Добавить учредителя" : "Add founder"
+        case .addFounder: return isRussian ? "Добавить учредителя" : "Add founder"
+        case .editFounder: return isRussian ? "Учредитель" : "Founder"
         case .editPerson: return isRussian ? "Редактировать" : "Edit"
         }
     }
@@ -114,6 +117,14 @@ struct PersonEditSheet: View {
                     }
                     .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
+                if case .editFounder(let personId, _, _, _, _, _, _) = context {
+                    ToolbarItem(placement: .destructiveAction) {
+                        Button(isRussian ? "Удалить" : "Delete", role: .destructive) {
+                            app.removeFounder(id: personId)
+                            dismiss()
+                        }
+                    }
+                }
             }
         }
         .presentationDetents([.medium, .large])
@@ -121,6 +132,14 @@ struct PersonEditSheet: View {
             if case .editPerson(_, _, let currentName, let currentTitle, _, let currentPhone, let currentEmail, let currentTelegram, let currentWhatsapp, let currentPhotoData) = context {
                 name = currentName
                 title = currentTitle
+                phone = currentPhone ?? ""
+                email = currentEmail ?? ""
+                telegram = currentTelegram ?? ""
+                whatsapp = currentWhatsapp ?? ""
+                photoData = currentPhotoData
+            }
+            if case .editFounder(_, let currentName, let currentPhone, let currentEmail, let currentTelegram, let currentWhatsapp, let currentPhotoData) = context {
+                name = currentName
                 phone = currentPhone ?? ""
                 email = currentEmail ?? ""
                 telegram = currentTelegram ?? ""
@@ -144,12 +163,10 @@ struct PersonEditSheet: View {
             app.addComanager(to: nodeId, name: trimmedName)
         case .fillVacancy(let nodeId):
             app.fillVacancy(nodeId, name: trimmedName, phone: phone, email: email, telegram: telegram, whatsapp: whatsapp, photoData: photoData)
-        case .addSuperior:
-            app.addSuperior(
-                name: trimmedName,
-                title: trimmedTitle.isEmpty ? (isRussian ? "Должность" : "Position") : trimmedTitle,
-                phone: phone, email: email, telegram: telegram, whatsapp: whatsapp, photoData: photoData
-            )
+        case .addFounder:
+            app.addFounder(name: trimmedName, phone: phone, email: email, telegram: telegram, whatsapp: whatsapp, photoData: photoData)
+        case .editFounder(let personId, _, _, _, _, _, _):
+            app.updateFounder(id: personId, name: trimmedName, phone: phone, email: email, telegram: telegram, whatsapp: whatsapp, photoData: photoData)
         case .editPerson(let nodeId, let personId, _, _, let showTitle, _, _, _, _, _):
             app.updatePerson(
                 nodeId, personId: personId, name: trimmedName,
