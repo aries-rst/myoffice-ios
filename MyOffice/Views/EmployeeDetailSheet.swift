@@ -21,18 +21,7 @@ struct EmployeeDetailSheet: View {
                     HStack(spacing: 20) {
                         ForEach(node.people) { person in
                             VStack(spacing: 6) {
-                                if let photoData = person.photoData, let uiImage = UIImage(data: photoData) {
-                                    Image(uiImage: uiImage)
-                                        .resizable()
-                                        .scaledToFill()
-                                        .frame(width: 130, height: 130)
-                                        .clipShape(Circle())
-                                        .overlay(Circle().stroke(app.theme.accent, lineWidth: 3))
-                                } else {
-                                    Image(systemName: "person.crop.circle.fill")
-                                        .font(.system(size: 90))
-                                        .foregroundStyle(app.theme.accent)
-                                }
+                                AvatarView(photoData: person.photoData, diameter: 130, ringColor: app.theme.accent)
                                 Text(person.name)
                                     .font(.system(size: 17, weight: .bold))
                                     .multilineTextAlignment(.center)
