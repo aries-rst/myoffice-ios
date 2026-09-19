@@ -6,6 +6,8 @@ struct SettingsView: View {
     @EnvironmentObject var app: AppState
     @State private var showResetConfirm = false
     @State private var wallpaperPhotoItem: PhotosPickerItem?
+    @State private var showCSVImport = false
+    @State private var csvShareItem: ShareItem?
 
     private var isRussian: Bool { app.lang == .ru }
 
@@ -99,6 +101,56 @@ struct SettingsView: View {
                      : "Wallpaper is independent of the color theme — mix and match freely.")
             }
 
+            Section {
+                Button {
+                    if app.canUseCSVTransfer {
+                        exportCSV()
+                    } else {
+                        app.upsellContext = .csvFeature
+                    }
+                } label: {
+                    HStack {
+                        Label(Strings.t(.csvExportBtn, app.lang), systemImage: "square.and.arrow.up.on.square")
+                        Spacer()
+                        if !app.canUseCSVTransfer {
+                            Image(systemName: "lock.fill").foregroundStyle(.secondary).font(.system(size: 12))
+                        }
+                    }
+                }
+                .foregroundStyle(.primary)
+
+                Button {
+                    if app.canUseCSVTransfer {
+                        showCSVImport = true
+                    } else {
+                        app.upsellContext = .csvFeature
+                    }
+                } label: {
+                    HStack {
+                        Label(Strings.t(.csvImportBtn, app.lang), systemImage: "square.and.arrow.down.on.square")
+                        Spacer()
+                        if !app.canUseCSVTransfer {
+                            Image(systemName: "lock.fill").foregroundStyle(.secondary).font(.system(size: 12))
+                        }
+                    }
+                }
+                .foregroundStyle(.primary)
+            } header: {
+                Text(Strings.t(.csvGroup, app.lang))
+            } footer: {
+                VStack(alignment: .leading, spacing: 6) {
+                    if !app.canUseCSVTransfer {
+                        Text(Strings.t(.csvMaxOnlyNote, app.lang))
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    Text(isRussian
+                         ? "Экспорт сохраняет всю структуру (учредителей и должности) в один CSV-файл — колонки Level, Founder, GroupID, Name, Title, Phone, Email, Telegram, WhatsApp. Тот же файл (не меняя порядок строк) можно потом импортировать обратно — это ПОЛНОСТЬЮ заменит текущие данные. Фото через CSV не передаются."
+                         : "Export saves the whole chart (founders and positions) into one CSV file — columns Level, Founder, GroupID, Name, Title, Phone, Email, Telegram, WhatsApp. The same file (with its row order unchanged) can later be imported back — this FULLY replaces the current data. Photos don't travel through CSV.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                }
+            }
+
             Section(Strings.t(.langGroup, app.lang)) {
                 Picker(Strings.t(.langLabel, app.lang), selection: $app.lang) {
                     Text("Русский").tag(Lang.ru)
@@ -132,6 +184,23 @@ struct SettingsView: View {
             Text(isRussian
                  ? "Это действие нельзя отменить."
                  : "This can't be undone.")
+        }
+        .sheet(isPresented: $showCSVImport) {
+            CSVImportSheet()
+        }
+        .sheet(item: $csvShareItem) { item in
+            ShareSheet(activityItems: [item.url])
+        }
+    }
+
+    private func exportCSV() {
+        let content = CSVTransfer.exportText(founders: app.founders, root: app.root)
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("org-chart-\(Int(Date().timeIntervalSince1970)).csv")
+        do {
+            try content.write(to: url, atomically: true, encoding: .utf8)
+            csvShareItem = ShareItem(url: url)
+        } catch {
+            app.showToast(Strings.t(.csvReadError, app.lang))
         }
     }
 }
