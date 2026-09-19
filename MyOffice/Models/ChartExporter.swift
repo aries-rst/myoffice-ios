@@ -1,8 +1,8 @@
 import SwiftUI
 import UIKit
 
-/// Standard paper sizes offered for printable exports (PDF chart poster and
-/// PDF list), in PDF points (1/72 inch) — the same unit UIGraphicsPDFRenderer
+/// Standard paper sizes offered for printable exports (PDF chart and PDF
+/// list), in PDF points (1/72 inch) — the same unit UIGraphicsPDFRenderer
 /// uses for page bounds.
 enum PaperSize: String, CaseIterable, Identifiable {
     case a4, a3, a2, a1
@@ -36,14 +36,17 @@ enum ChartExporter {
     /// for a PNG export and show a message instead of attempting the render.
     static let pngSafeLimit = 60
 
-    /// Even the tiled poster PDF has a practical ceiling — past this many
-    /// people the base raster itself becomes too large to safely build.
+    /// Even a single-page "fit to page" or tiled poster PDF has a practical
+    /// ceiling — past this many people the base raster itself becomes too
+    /// large to safely build.
     static let posterSafeLimit = 500
 
     /// A poster with more pages than this is almost certainly not what the
     /// user wanted (would mean an enormous paper size or a huge chart) —
     /// treated as a failure so the caller can suggest a bigger paper size or
-    /// narrowing the export (by branch or depth limit) instead.
+    /// narrowing the export (by branch or depth limit) instead. Only applies
+    /// to the multi-page "poster" mode — the default "fit to page" mode is
+    /// always exactly one page, so it never hits this ceiling.
     static let posterMaxPages = 60
 
     static func personCount(founders: [OrgPerson], root: OrgNode) -> Int {
@@ -56,7 +59,7 @@ enum ChartExporter {
     static func renderChartImage(app: AppState, founders: [OrgPerson], root: OrgNode, scale: CGFloat) -> UIImage? {
         let isRussian = app.lang == .ru
         let accent = app.theme.accent
-        let content = VStack(spacing: 10) {
+        let content = VStack(alignment: .leading, spacing: 10) {
             if !founders.isEmpty {
                 HStack(spacing: 10) {
                     ForEach(founders) { founder in
@@ -71,11 +74,12 @@ enum ChartExporter {
                 }
                 Rectangle().fill(accent.opacity(0.3)).frame(width: 2, height: 14)
             }
-            NodeBranchView(
-                node: root,
-                onTap: { _ in }, onMenu: { _ in }, onAddReport: { _ in },
-                accent: accent, isRussian: isRussian, showControls: false
-            )
+            // Horizontal (left-to-right) layout, used ONLY for export
+            // rendering — turns the chart's natural wide-and-short shape into
+            // a tall-and-narrow one that fits portrait paper far better and
+            // reads top-to-bottom like a scroll. The on-screen tree stays
+            // vertical (see OrgChartView / NodeBranchView).
+            HorizontalNodeBranchView(node: root, accent: accent, isRussian: isRussian)
         }
         .padding(30)
         .background(Color.white)
@@ -115,9 +119,38 @@ enum ChartExporter {
         }
     }
 
-    // MARK: - PDF "poster" — tiles one big raster across N pages of a chosen paper size
+    // MARK: - PDF chart, "fit to page" (default) — scales the whole raster
+    // down (or up) to fit on a single sheet of the chosen paper size. Always
+    // exactly one page, so it can never fail with "too many pages" the way
+    // the poster mode below can.
 
-    static func writePDFChart(image: UIImage, paperSize: PaperSize) -> URL? {
+    static func writePDFChartFitted(image: UIImage, paperSize: PaperSize) -> URL? {
+        let pageSize = paperSize.pointSize
+        let margin: CGFloat = 24
+        let available = CGSize(width: pageSize.width - margin * 2, height: pageSize.height - margin * 2)
+        guard available.width > 0, available.height > 0, image.size.width > 0, image.size.height > 0 else { return nil }
+        let fitScale = min(available.width / image.size.width, available.height / image.size.height)
+        let drawSize = CGSize(width: image.size.width * fitScale, height: image.size.height * fitScale)
+        let origin = CGPoint(x: (pageSize.width - drawSize.width) / 2, y: (pageSize.height - drawSize.height) / 2)
+
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("org-chart-\(Int(Date().timeIntervalSince1970)).pdf")
+        let renderer = UIGraphicsPDFRenderer(bounds: CGRect(origin: .zero, size: pageSize))
+        do {
+            try renderer.writePDF(to: url) { ctx in
+                ctx.beginPage()
+                image.draw(in: CGRect(origin: origin, size: drawSize))
+            }
+            return url
+        } catch {
+            return nil
+        }
+    }
+
+    // MARK: - PDF chart, "poster" (explicit opt-in) — tiles one big raster
+    // across N pages of a chosen paper size at full (1:1) size, for genuine
+    // wall-poster printing. writePDFChartFitted (above) is the default.
+
+    static func writePDFChartPoster(image: UIImage, paperSize: PaperSize) -> URL? {
         guard let cgImage = image.cgImage else { return nil }
         let pageSize = paperSize.pointSize
         let imageScale = image.scale
