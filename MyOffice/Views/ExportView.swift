@@ -48,6 +48,8 @@ struct ExportView: View {
                 .tint(app.theme.accent)
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(WallpaperBackgroundView())
         .navigationTitle(Strings.t(.exportTitle, app.lang))
         .sheet(item: $shareItem) { item in
             ShareSheet(activityItems: [item.url])
@@ -67,11 +69,27 @@ struct ExportView: View {
 
     @MainActor
     private func renderImage() -> UIImage? {
-        let content = NodeBranchView(
-            node: app.root,
-            onTap: { _ in }, onMenu: { _ in }, onAddReport: { _ in },
-            accent: app.theme.accent, isRussian: isRussian, showControls: false
-        )
+        let content = VStack(spacing: 10) {
+            if !app.founders.isEmpty {
+                HStack(spacing: 10) {
+                    ForEach(app.founders) { founder in
+                        VStack(spacing: 4) {
+                            AvatarView(photoData: founder.photoData, diameter: 34)
+                            Text(founder.name).font(.system(size: 12, weight: .semibold)).fixedSize()
+                        }
+                        .padding(8)
+                        .background(Color.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                }
+                Rectangle().fill(app.theme.accent.opacity(0.3)).frame(width: 2, height: 14)
+            }
+            NodeBranchView(
+                node: app.root,
+                onTap: { _ in }, onMenu: { _ in }, onAddReport: { _ in },
+                accent: app.theme.accent, isRussian: isRussian, showControls: false
+            )
+        }
         .padding(30)
         .background(Color.white)
         .environmentObject(app)
@@ -145,7 +163,12 @@ struct ExportView: View {
 
     private func exportCSV() {
         let header = "Name,Title,Phone,Email,Telegram,WhatsApp"
-        let content = ([header] + csvRows(from: app.root)).joined(separator: "\n")
+        var lines = [header]
+        for founder in app.founders {
+            lines.append("\"\(founder.name)\",\"\(isRussian ? "Учредитель" : "Founder")\",\"\(founder.phone ?? "")\",\"\(founder.email ?? "")\",\"\(founder.telegram ?? "")\",\"\(founder.whatsapp ?? "")\"")
+        }
+        lines.append(contentsOf: csvRows(from: app.root))
+        let content = lines.joined(separator: "\n")
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("org-chart-\(Int(Date().timeIntervalSince1970)).csv")
         do {
             try content.write(to: url, atomically: true, encoding: .utf8)
