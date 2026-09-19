@@ -158,7 +158,12 @@ struct ExportView: View {
                 : "This scope has \(count) people — too many for a single PNG (limit ~\(ChartExporter.pngSafeLimit)). Use PDF (chart or list), limit by levels, or export a single branch instead."
             return
         }
-        guard let image = ChartExporter.renderChartImage(app: app, founders: effectiveFounders, root: effectiveRoot, scale: 3) else { return }
+        guard let image = ChartExporter.renderChartImage(app: app, founders: effectiveFounders, root: effectiveRoot, scale: 3) else {
+            sizeWarning = isRussian
+                ? "Не удалось построить изображение — структура слишком сложная/разветвлённая для рендеринга. Ограничьте по уровням или экспортируйте отдельную ветку."
+                : "Couldn't render the image — the structure is too complex to draw. Limit by levels or export a single branch instead."
+            return
+        }
         let final = ChartExporter.watermarked(image, show: app.tier == .free)
         guard let url = ChartExporter.writePNG(final, filenamePrefix: "org-chart") else { return }
         shareItem = ShareItem(url: url)
@@ -177,7 +182,12 @@ struct ExportView: View {
                     : "This scope has \(count) people — too many even for a chart PDF. Limit by levels or export by branch/department instead."
                 return
             }
-            guard let image = ChartExporter.renderChartImage(app: app, founders: effectiveFounders, root: effectiveRoot, scale: 2) else { return }
+            guard let image = ChartExporter.renderChartImage(app: app, founders: effectiveFounders, root: effectiveRoot, scale: 2) else {
+                sizeWarning = isRussian
+                    ? "Не удалось построить схему — структура слишком сложная/разветвлённая для рендеринга. Ограничьте по уровням, экспортируйте по ветке или используйте стиль «Список»."
+                    : "Couldn't render the chart — the structure is too complex to draw. Limit by levels, export a branch, or use the List style instead."
+                return
+            }
             let final = ChartExporter.watermarked(image, show: app.tier == .free)
             let candidateURL = posterMode
                 ? ChartExporter.writePDFChartPoster(image: final, paperSize: paperSize)
