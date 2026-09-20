@@ -230,6 +230,18 @@ struct NodeBranchView: View {
     /// building every card at once on first load.
     private static let defaultExpandDepth = 2
 
+    /// Once a node has more children than this AND all of them are leaves
+    /// (rank-and-file people with no reports of their own — the widest,
+    /// bushiest fan-outs in any org), they're stacked in a single column
+    /// instead of spread into one wide row. Mirrors the same rule used for
+    /// exported charts (ChartExportBranchView) so the on-screen tree doesn't
+    /// force horizontal scrolling for a manager with a dozen+ direct staff.
+    private static let maxPerRow = 3
+
+    private var allChildrenAreLeaves: Bool {
+        !node.children.isEmpty && node.children.allSatisfy { $0.children.isEmpty }
+    }
+
     private var isExpanded: Bool {
         if collapsedIDs.contains(node.id) { return false }
         if expandedIDs.contains(node.id) { return true }
@@ -280,21 +292,41 @@ struct NodeBranchView: View {
                 .buttonStyle(.plain)
 
                 if isExpanded {
-                    HStack(alignment: .top, spacing: 28) {
-                        ForEach(node.children) { child in
-                            NodeBranchView(
-                                node: child,
-                                onTap: onTap,
-                                onMenu: onMenu,
-                                onAddReport: onAddReport,
-                                accent: accent,
-                                isRussian: isRussian,
-                                showControls: showControls,
-                                depth: depth + 1,
-                                expandedIDs: expandedIDs,
-                                collapsedIDs: collapsedIDs,
-                                onToggleExpand: onToggleExpand
-                            )
+                    if node.children.count > Self.maxPerRow && allChildrenAreLeaves {
+                        VStack(spacing: 12) {
+                            ForEach(node.children) { child in
+                                NodeBranchView(
+                                    node: child,
+                                    onTap: onTap,
+                                    onMenu: onMenu,
+                                    onAddReport: onAddReport,
+                                    accent: accent,
+                                    isRussian: isRussian,
+                                    showControls: showControls,
+                                    depth: depth + 1,
+                                    expandedIDs: expandedIDs,
+                                    collapsedIDs: collapsedIDs,
+                                    onToggleExpand: onToggleExpand
+                                )
+                            }
+                        }
+                    } else {
+                        HStack(alignment: .top, spacing: 28) {
+                            ForEach(node.children) { child in
+                                NodeBranchView(
+                                    node: child,
+                                    onTap: onTap,
+                                    onMenu: onMenu,
+                                    onAddReport: onAddReport,
+                                    accent: accent,
+                                    isRussian: isRussian,
+                                    showControls: showControls,
+                                    depth: depth + 1,
+                                    expandedIDs: expandedIDs,
+                                    collapsedIDs: collapsedIDs,
+                                    onToggleExpand: onToggleExpand
+                                )
+                            }
                         }
                     }
                 }
