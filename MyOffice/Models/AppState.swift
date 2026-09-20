@@ -43,11 +43,22 @@ final class AppState: ObservableObject {
     private let foundersKey = "myoffice.founders"
     private let legacyHasFounderTierKey = "myoffice.hasFounderTier"
 
+    // Guards against save() firing mid-load(). Several @Published properties
+    // below have `didSet { save() }`, and load() assigns them one at a time
+    // from disk — without this flag, the very first assignment (e.g. root)
+    // would trigger a save() that writes every OTHER property's still-default
+    // in-memory value (e.g. founders, still []) back over its real saved
+    // value on disk, permanently wiping it before load() ever gets to read
+    // it. This is exactly what caused founders to reset to empty on every
+    // relaunch regardless of how they were added.
+    private var isLoading = false
+
     init() {
         load()
     }
 
     private func save() {
+        guard !isLoading else { return }
         if let data = try? JSONEncoder().encode(root) {
             UserDefaults.standard.set(data, forKey: rootKey)
         }
@@ -66,6 +77,8 @@ final class AppState: ObservableObject {
     }
 
     private func load() {
+        isLoading = true
+        var needsSaveAfterLoad = false
         if let data = UserDefaults.standard.data(forKey: rootKey),
            let decoded = try? JSONDecoder().decode(OrgNode.self, from: data) {
             root = decoded
@@ -99,8 +112,10 @@ final class AppState: ObservableObject {
                 root = ceo
             }
             UserDefaults.standard.removeObject(forKey: legacyHasFounderTierKey)
-            save()
+            needsSaveAfterLoad = true
         }
+        isLoading = false
+        if needsSaveAfterLoad { save() }
     }
 
     func resetAllData() {
