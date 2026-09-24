@@ -13,7 +13,11 @@ targets:
     platform: iOS
     deploymentTarget: "16.0"
     sources:
-      - MyOffice
+      - path: MyOffice
+        excludes:
+          - "Resources/ImportTemplate.xlsx"
+      - path: MyOffice/Resources/ImportTemplate.xlsx
+        buildPhase: resources
     info:
       path: MyOffice/Info.plist
       properties:
@@ -35,7 +39,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.aries-rst.myoffice.app
         MARKETING_VERSION: "1.0"
-        CURRENT_PROJECT_VERSION: "23"
+        CURRENT_PROJECT_VERSION: "24"
         SWIFT_VERSION: "5.0"
         TARGETED_DEVICE_FAMILY: "1,2"
         ENABLE_PREVIEWS: YES
