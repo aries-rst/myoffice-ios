@@ -135,6 +135,23 @@ struct SettingsView: View {
                     }
                 }
                 .foregroundStyle(.primary)
+
+                Button {
+                    if app.canUseCSVTransfer {
+                        downloadTemplate()
+                    } else {
+                        app.upsellContext = .csvFeature
+                    }
+                } label: {
+                    HStack {
+                        Label(isRussian ? "Скачать шаблон Excel" : "Download Excel template", systemImage: "doc.badge.arrow.up")
+                        Spacer()
+                        if !app.canUseCSVTransfer {
+                            Image(systemName: "lock.fill").foregroundStyle(.secondary).font(.system(size: 12))
+                        }
+                    }
+                }
+                .foregroundStyle(.primary)
             } header: {
                 Text(Strings.t(.csvGroup, app.lang))
             } footer: {
@@ -144,109 +161,4 @@ struct SettingsView: View {
                             .font(.system(size: 12, weight: .semibold))
                     }
                     Text(isRussian
-                         ? "Экспорт сохраняет всю структуру (учредителей и должности) в один CSV-файл — колонки Level, Founder, GroupID, Name, Title, Phone, Email, Telegram, WhatsApp. Тот же файл (не меняя порядок строк) можно потом импортировать обратно — это ПОЛНОСТЬЮ заменит текущие данные. Фото через CSV не передаются."
-                         : "Export saves the whole chart (founders and positions) into one CSV file — columns Level, Founder, GroupID, Name, Title, Phone, Email, Telegram, WhatsApp. The same file (with its row order unchanged) can later be imported back — this FULLY replaces the current data. Photos don't travel through CSV.")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
-                    Text(isRussian
-                         ? "Большую структуру удобнее сначала набрать в Excel/Google Таблицах с теми же колонками (по одному сотруднику в строке, порядок строк как в дереве), а затем сохранить/экспортировать этот файл как CSV (UTF-8) и импортировать его сюда."
-                         : "For a large chart, it's easier to first build the table in Excel/Google Sheets using the same columns (one employee per row, in the same order as the tree), then save/export that file as CSV (UTF-8) and import it here.")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            Section(Strings.t(.langGroup, app.lang)) {
-                Picker(Strings.t(.langLabel, app.lang), selection: $app.lang) {
-                    Text("Русский").tag(Lang.ru)
-                    Text("English").tag(Lang.en)
-                }
-                .pickerStyle(.segmented)
-            }
-
-            Section {
-                Button(role: .destructive) {
-                    showResetConfirm = true
-                } label: {
-                    Text(isRussian ? "Очистить все данные" : "Clear all data")
-                        .frame(maxWidth: .infinity)
-                }
-            } footer: {
-                Text(isRussian
-                     ? "Удалит всю структуру и сотрудников. Покупки и тема останутся."
-                     : "Removes the whole org chart and employees. Your purchase and theme stay.")
-            }
-        }
-        .scrollContentBackground(.hidden)
-        .background(WallpaperBackgroundView())
-        .navigationTitle(Strings.t(.settingsTitle, app.lang))
-        .alert(isRussian ? "Очистить все данные?" : "Clear all data?", isPresented: $showResetConfirm) {
-            Button(isRussian ? "Отмена" : "Cancel", role: .cancel) {}
-            Button(isRussian ? "Очистить" : "Clear", role: .destructive) {
-                app.resetAllData()
-            }
-        } message: {
-            Text(isRussian
-                 ? "Это действие нельзя отменить."
-                 : "This can't be undone.")
-        }
-        .sheet(isPresented: $showCSVImport) {
-            CSVImportSheet()
-        }
-        .sheet(item: $csvShareItem) { item in
-            ShareSheet(activityItems: [item.url])
-        }
-    }
-
-    private func exportCSV() {
-        let content = CSVTransfer.exportText(founders: app.founders, root: app.root)
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent("org-chart-\(Int(Date().timeIntervalSince1970)).csv")
-        do {
-            try content.write(to: url, atomically: true, encoding: .utf8)
-            csvShareItem = ShareItem(url: url)
-        } catch {
-            app.showToast(Strings.t(.csvReadError, app.lang))
-        }
-    }
-}
-
-private struct TierRow: View {
-    @EnvironmentObject var app: AppState
-    let tier: Tier
-    let nameKey: L
-    let priceKey: L
-    let blurbKey: L
-    let ctaKey: L
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text(Strings.t(nameKey, app.lang))
-                    .font(.system(size: 15, weight: .bold))
-                Spacer()
-                Text(Strings.t(priceKey, app.lang))
-                    .font(.system(size: 15, weight: .semibold))
-                if app.tier == tier {
-                    Text(Strings.t(.currentBadge, app.lang))
-                        .font(.system(size: 11, weight: .bold))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(app.theme.accent.opacity(0.15), in: Capsule())
-                        .foregroundStyle(app.theme.accent)
-                }
-            }
-            Text(Strings.t(blurbKey, app.lang))
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
-
-            if app.tier != tier {
-                Button(Strings.t(ctaKey, app.lang)) {
-                    app.selectTier(tier)
-                }
-                .font(.system(size: 13, weight: .semibold))
-                .tint(app.theme.accent)
-            }
-        }
-        .padding(.vertical, 4)
-    }
-}
+                         ? "Экспорт сохраняет всю структуру (учредителей и должности) в один CSV-файл — колонки Level, Founder, GroupID, Name, Title, Phone, Email, Telegram, WhatsApp. Тот же файл (не меняя порядок строк) можно потом импортировать обратно — это ПОЛНОСТЬЮ заменит
