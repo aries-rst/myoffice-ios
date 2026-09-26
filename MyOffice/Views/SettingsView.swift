@@ -4,6 +4,7 @@ import UIKit
 
 struct SettingsView: View {
     @EnvironmentObject var app: AppState
+    @EnvironmentObject var store: StoreManager
     @State private var showResetConfirm = false
     @State private var wallpaperPhotoItem: PhotosPickerItem?
     @State private var showCSVImport = false
@@ -13,10 +14,35 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            Section(Strings.t(.tierGroup, app.lang)) {
-                TierRow(tier: .free, nameKey: .tierFreeName, priceKey: .tierFreePrice, blurbKey: .tierFreeBlurb, ctaKey: .tierFreeCta)
-                TierRow(tier: .pro, nameKey: .tierProName, priceKey: .tierProPrice, blurbKey: .tierProBlurb, ctaKey: .tierProCta)
-                TierRow(tier: .max, nameKey: .tierMaxName, priceKey: .tierMaxPrice, blurbKey: .tierMaxBlurb, ctaKey: .tierMaxCta)
+            Section {
+                TierRow(tier: .free, productID: nil, nameKey: .tierFreeName, priceKey: .tierFreePrice, blurbKey: .tierFreeBlurb, ctaKey: .tierFreeCta)
+                TierRow(tier: .pro, productID: .pro, nameKey: .tierProName, priceKey: .tierProPrice, blurbKey: .tierProBlurb, ctaKey: .tierProCta)
+                TierRow(tier: .max, productID: .max, nameKey: .tierMaxName, priceKey: .tierMaxPrice, blurbKey: .tierMaxBlurb, ctaKey: .tierMaxCta)
+
+                Button {
+                    Task { await store.restore() }
+                } label: {
+                    HStack {
+                        Text(Strings.t(.restorePurchases, app.lang))
+                        Spacer()
+                        if store.isPurchasing {
+                            ProgressView()
+                        }
+                    }
+                }
+                .disabled(store.isPurchasing)
+            } header: {
+                Text(Strings.t(.tierGroup, app.lang))
+            } footer: {
+                if let error = store.lastError {
+                    Text(error)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.red)
+                } else if let status = store.statusMessage {
+                    Text(status)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Section(Strings.t(.themeGroup, app.lang)) {
@@ -242,11 +268,22 @@ struct SettingsView: View {
 
 private struct TierRow: View {
     @EnvironmentObject var app: AppState
+    @EnvironmentObject var store: StoreManager
     let tier: Tier
+    let productID: ProductID?
     let nameKey: L
     let priceKey: L
     let blurbKey: L
     let ctaKey: L
+
+    /// Prefers the real, localized App Store price once StoreKit has loaded
+    /// the product; falls back to the static string while that's in flight.
+    private var displayPrice: String {
+        if let productID, let product = store.product(for: productID) {
+            return product.displayPrice
+        }
+        return Strings.t(priceKey, app.lang)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -254,7 +291,7 @@ private struct TierRow: View {
                 Text(Strings.t(nameKey, app.lang))
                     .font(.system(size: 15, weight: .bold))
                 Spacer()
-                Text(Strings.t(priceKey, app.lang))
+                Text(displayPrice)
                     .font(.system(size: 15, weight: .semibold))
                 if app.tier == tier {
                     Text(Strings.t(.currentBadge, app.lang))
@@ -269,10 +306,21 @@ private struct TierRow: View {
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
 
-            if app.tier != tier {
-                Button(Strings.t(ctaKey, app.lang)) {
-                    app.selectTier(tier)
+            // Free has nothing to buy or restore into — no CTA for it. A real
+            // non-consumable purchase can only ever go up, never be "selected"
+            // back down to free locally (that would just be undone again the
+            // next time entitlements are refreshed from the App Store).
+            if app.tier != tier, let productID {
+                Button {
+                    Task { await store.purchase(productID) }
+                } label: {
+                    if store.isPurchasing {
+                        ProgressView()
+                    } else {
+                        Text(Strings.t(ctaKey, app.lang))
+                    }
                 }
+                .disabled(store.isPurchasing)
                 .font(.system(size: 13, weight: .semibold))
                 .tint(app.theme.accent)
             }
