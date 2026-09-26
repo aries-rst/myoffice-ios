@@ -2,6 +2,7 @@ import SwiftUI
 
 struct LimitPaywallSheet: View {
     @EnvironmentObject var app: AppState
+    @EnvironmentObject var store: StoreManager
     @Environment(\.dismiss) var dismiss
     let context: UpsellContext
 
@@ -52,25 +53,46 @@ struct LimitPaywallSheet: View {
             VStack(spacing: 12) {
                 if app.tier == .free, isCSVContext == false {
                     Button {
-                        app.selectTier(.pro)
-                        dismiss()
+                        Task {
+                            await store.purchase(.pro)
+                            if app.tier != .free { dismiss() }
+                        }
                     } label: {
-                        Text(Strings.t(.limitProBtn, app.lang))
-                            .frame(maxWidth: .infinity)
+                        if store.isPurchasing {
+                            ProgressView().frame(maxWidth: .infinity)
+                        } else {
+                            Text(Strings.t(.limitProBtn, app.lang))
+                                .frame(maxWidth: .infinity)
+                        }
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(app.theme.accent)
+                    .disabled(store.isPurchasing)
                 }
 
                 Button {
-                    app.selectTier(.max)
-                    dismiss()
+                    Task {
+                        await store.purchase(.max)
+                        if app.tier == .max { dismiss() }
+                    }
                 } label: {
-                    Text(Strings.t(.limitMaxBtn, app.lang))
-                        .frame(maxWidth: .infinity)
+                    if store.isPurchasing {
+                        ProgressView().frame(maxWidth: .infinity)
+                    } else {
+                        Text(Strings.t(.limitMaxBtn, app.lang))
+                            .frame(maxWidth: .infinity)
+                    }
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.black)
+                .disabled(store.isPurchasing)
+
+                if let error = store.lastError {
+                    Text(error)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.red)
+                        .multilineTextAlignment(.center)
+                }
 
                 Button {
                     dismiss()
@@ -79,12 +101,13 @@ struct LimitPaywallSheet: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
+                .disabled(store.isPurchasing)
             }
             .padding(.horizontal, 24)
             .padding(.bottom, 24)
 
             Spacer(minLength: 0)
         }
-        .presentationDetents([.height(360)])
+        .presentationDetents([.height(400)])
     }
 }
