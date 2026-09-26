@@ -28,6 +28,7 @@ enum L: String {
     case csvUpsellTitle, csvUpsellText
     case csvImportSheetTitle, csvChooseFile, csvPreviewTitle, csvReplaceConfirm, csvCancel
     case csvReadError
+    case restorePurchases
     case scopeGroup, includeFoundersToggle, limitDepthToggle, depthStepper
     case pdfStyleGroup, pdfStyleChart, pdfStyleList, paperSizeGroup
     case branchExportAction, branchExportTitle
@@ -66,6 +67,7 @@ enum Strings {
         .csvImportSheetTitle: "Импорт из CSV", .csvChooseFile: "Выбрать CSV-файл",
         .csvPreviewTitle: "Предпросмотр импорта", .csvReplaceConfirm: "Заменить текущие данные",
         .csvCancel: "Отмена", .csvReadError: "Не удалось прочитать файл",
+        .restorePurchases: "Восстановить покупки",
         .scopeGroup: "Что показывать", .includeFoundersToggle: "Показывать учредителей",
         .limitDepthToggle: "Ограничить по уровням", .depthStepper: "Уровней",
         .pdfStyleGroup: "Стиль PDF", .pdfStyleChart: "Схема", .pdfStyleList: "Список",
@@ -105,6 +107,7 @@ enum Strings {
         .csvImportSheetTitle: "Import from CSV", .csvChooseFile: "Choose CSV file",
         .csvPreviewTitle: "Import preview", .csvReplaceConfirm: "Replace current data",
         .csvCancel: "Cancel", .csvReadError: "Couldn't read the file",
+        .restorePurchases: "Restore purchases",
         .scopeGroup: "What to include", .includeFoundersToggle: "Include founders",
         .limitDepthToggle: "Limit by levels", .depthStepper: "Levels",
         .pdfStyleGroup: "PDF style", .pdfStyleChart: "Chart", .pdfStyleList: "List",
