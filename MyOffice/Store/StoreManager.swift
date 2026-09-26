@@ -38,6 +38,7 @@ final class StoreManager: ObservableObject {
     @Published private(set) var products: [Product] = []
     @Published var isPurchasing = false
     @Published var lastError: String?
+    @Published var statusMessage: String?
 
     private var updatesTask: Task<Void, Never>?
     private weak var appState: AppState?
@@ -82,6 +83,7 @@ final class StoreManager: ObservableObject {
     func purchase(_ id: ProductID) async {
         guard !isPurchasing else { return }
         lastError = nil
+        statusMessage = nil
         guard let product = product(for: id) else {
             // Products may not have loaded yet (e.g. cold launch with a slow
             // network) — try once more before giving up.
@@ -124,11 +126,13 @@ final class StoreManager: ObservableObject {
     func restore() async {
         guard !isPurchasing else { return }
         lastError = nil
+        statusMessage = nil
         isPurchasing = true
         defer { isPurchasing = false }
         do {
             try await AppStore.sync()
             await refreshEntitlements()
+            statusMessage = "Purchases restored."
         } catch {
             lastError = error.localizedDescription
         }
