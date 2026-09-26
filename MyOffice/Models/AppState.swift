@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import StoreKit
 
 enum Tier: String, CaseIterable, Codable {
     case free, pro, max
@@ -276,8 +277,28 @@ final class AppState: ObservableObject {
         showToast(Strings.t(.themeChanged, lang))
     }
 
-    func selectTier(_ newTier: Tier) {
-        tier = newTier
+    // MARK: - Real entitlements (called only by StoreManager — this is the
+    // one and only place `tier` changes based on an actual purchase, replacing
+    // the old fake `selectTier` that just flipped the tier locally for free.)
+
+    /// Applied right after a purchase completes, or when a transaction update
+    /// arrives (e.g. an Ask to Buy approval). Only ever upgrades — a MAX owner
+    /// who also holds a PRO transaction stays on MAX.
+    func applyEntitlement(for transaction: Transaction) {
+        guard let id = ProductID(rawValue: transaction.productID) else { return }
+        if id.tier == .max {
+            tier = .max
+        } else if id.tier == .pro && tier != .max {
+            tier = .pro
+        }
         showToast(Strings.t(.tierChanged, lang))
+    }
+
+    /// Sets the tier from a full recomputation of current entitlements (used
+    /// at launch and after "Restore purchases"). Unlike applyEntitlement, this
+    /// can also move the tier back to .free if no entitlement is found — that
+    /// is correct here since it reflects the complete, authoritative set.
+    func setTierFromEntitlements(_ newTier: Tier) {
+        tier = newTier
     }
 }
