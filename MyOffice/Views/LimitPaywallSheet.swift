@@ -33,6 +33,14 @@ struct LimitPaywallSheet: View {
         }
     }
 
+    /// Button text with the real App Store price for the user's storefront
+    /// (falls back to the built-in US text if products haven't loaded).
+    private func priceLabel(_ key: L, _ id: ProductID, _ fallbackPrice: String) -> String {
+        let base = Strings.t(key, app.lang)
+        guard let product = store.product(for: id) else { return base }
+        return base.replacingOccurrences(of: fallbackPrice, with: product.displayPrice)
+    }
+
     var body: some View {
         VStack(spacing: 20) {
             Capsule()
@@ -61,7 +69,7 @@ struct LimitPaywallSheet: View {
                         if store.isPurchasing {
                             ProgressView().frame(maxWidth: .infinity)
                         } else {
-                            Text(Strings.t(.limitProBtn, app.lang))
+                            Text(priceLabel(.limitProBtn, .pro, "$8.99"))
                                 .frame(maxWidth: .infinity)
                         }
                     }
@@ -79,7 +87,7 @@ struct LimitPaywallSheet: View {
                     if store.isPurchasing {
                         ProgressView().frame(maxWidth: .infinity)
                     } else {
-                        Text(Strings.t(.limitMaxBtn, app.lang))
+                        Text(priceLabel(.limitMaxBtn, .max, "$14.99"))
                             .frame(maxWidth: .infinity)
                     }
                 }
