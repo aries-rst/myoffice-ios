@@ -6,6 +6,7 @@ struct SettingsView: View {
     @EnvironmentObject var app: AppState
     @EnvironmentObject var store: StoreManager
     @State private var showResetConfirm = false
+    @State private var showSampleConfirm = false
     @State private var wallpaperPhotoItem: PhotosPickerItem?
     @State private var showCSVImport = false
     @State private var csvShareItem: ShareItem?
@@ -208,6 +209,23 @@ struct SettingsView: View {
             }
 
             Section {
+                Button {
+                    if app.employeeCount > 0 {
+                        showSampleConfirm = true
+                    } else {
+                        app.loadSampleCompany()
+                    }
+                } label: {
+                    Label(isRussian ? "Загрузить пример компании" : "Load sample company", systemImage: "building.2")
+                }
+                .foregroundStyle(.primary)
+            } footer: {
+                Text(isRussian
+                     ? "Заполняет схему примером из 7 сотрудников, чтобы посмотреть, как всё выглядит. Доступно всем."
+                     : "Fills the chart with a 7-person example so you can see how everything looks. Available to everyone.")
+            }
+
+            Section {
                 CrossPromoSection(accent: app.theme.accent, textColor: .primary, cardFill: Color(.secondarySystemBackground))
             }
 
@@ -236,6 +254,16 @@ struct SettingsView: View {
             Text(isRussian
                  ? "Это действие нельзя отменить."
                  : "This can't be undone.")
+        }
+        .alert(isRussian ? "Заменить данные примером?" : "Replace data with the sample?", isPresented: $showSampleConfirm) {
+            Button(isRussian ? "Отмена" : "Cancel", role: .cancel) {}
+            Button(isRussian ? "Заменить" : "Replace", role: .destructive) {
+                app.loadSampleCompany()
+            }
+        } message: {
+            Text(isRussian
+                 ? "Текущая структура и сотрудники будут заменены. Это действие нельзя отменить."
+                 : "Your current chart and employees will be replaced. This can't be undone.")
         }
         .sheet(isPresented: $showCSVImport) {
             CSVImportSheet()

@@ -148,6 +148,40 @@ final class AppState: ObservableObject {
         showToast(lang == .ru ? "Данные импортированы" : "Data imported")
     }
 
+    /// Fills the chart with a small fictional company (7 people, so it fits
+    /// the FREE tier limit and works for every user). Offered openly in
+    /// Settings so anyone — including App Review — can see a populated chart.
+    func loadSampleCompany() {
+        let ru = lang == .ru
+        func person(_ name: String) -> OrgPerson { OrgPerson(name: name) }
+        let sales = OrgNode(
+            people: [person(ru ? "Анна Соколова" : "Anna Parker")],
+            title: ru ? "Директор по продажам" : "Head of Sales",
+            deptColor: .sales,
+            children: [
+                OrgNode(people: [person(ru ? "Игорь Попов" : "Ethan Brooks")], title: ru ? "Менеджер по работе с клиентами" : "Account Manager", deptColor: .sales),
+                OrgNode(people: [person(ru ? "Мария Лебедева" : "Olivia Grant")], title: ru ? "Менеджер по продажам" : "Sales Representative", deptColor: .sales)
+            ]
+        )
+        let tech = OrgNode(
+            people: [person(ru ? "Дмитрий Орлов" : "Daniel Carter")],
+            title: ru ? "Технический директор" : "Head of Engineering",
+            deptColor: .tech,
+            children: [
+                OrgNode(people: [person(ru ? "Сергей Ким" : "Noah Reed")], title: ru ? "Разработчик" : "Software Engineer", deptColor: .tech),
+                OrgNode(people: [person(ru ? "Елена Новикова" : "Emma Collins")], title: ru ? "Тестировщик" : "QA Engineer", deptColor: .tech)
+            ]
+        )
+        let newRoot = OrgNode(
+            people: [person(ru ? "Алексей Иванов" : "Michael Hayes")],
+            title: ru ? "Генеральный директор" : "CEO",
+            deptColor: .ceo,
+            children: [sales, tech]
+        )
+        replaceAllData(founders: [], root: newRoot)
+        showToast(ru ? "Загружен пример компании" : "Sample company loaded")
+    }
+
     func showToast(_ text: String) {
         toastMessage = text
     }
