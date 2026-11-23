@@ -13,7 +13,7 @@ struct CrossPromoEntry: Identifiable {
     let systemImage: String
     let appleID: Int        // numeric App Store Connect app id
 
-    var storeURL: URL { URL(string: "https://apps.apple.com/app/id\(appleID)")! }
+    var storeURL: URL { URL(string: "https://arestilabs.com")! } // apps not yet live on the App Store
 }
 
 enum CrossPromoCatalog {
